@@ -1,5 +1,5 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { 
@@ -39,130 +39,93 @@ import {
   Download, 
   Briefcase, 
   Users, 
-  School
+  School,
+  Loader2
 } from 'lucide-react';
-
-// Mock data for total earnings
-const totalEarningsData = {
-  totalEarnings: 24650,
-  totalStudentSales: 123250,
-  studentCount: 156,
-  teacherCount: 12,
-  batchCount: 9
-};
-
-// Mock data for daily earnings
-const dailyEarningsData = [
-  { date: '2023-06-01', earnings: 150, studentSales: 0},
-  { date: '2023-06-02', earnings: 200, studentSales: 0 },
-  { date: '2023-06-03', earnings: 100, studentSales: 0},
-  { date: '2023-06-04', earnings: 300, studentSales: 0 },
-  { date: '2023-06-05', earnings: 250, studentSales: 0 },
-  { date: '2023-06-06', earnings: 320, studentSales: 0 },
-  { date: '2023-06-07', earnings: 280, studentSales: 0 },
-  { date: '2023-06-08', earnings: 220, studentSales: 0 },
-  { date: '2023-06-09', earnings: 190, studentSales: 0},
-  { date: '2023-06-10', earnings: 350, studentSales: 0 },
-  { date: '2023-06-11', earnings: 400, studentSales: 0 },
-  { date: '2023-06-12', earnings: 280, studentSales: 0 },
-  { date: '2023-06-13', earnings: 250, studentSales: 0 },
-  { date: '2023-06-14', earnings: 310, studentSales: 0 },
-];
-
-// Mock data for batch earnings
-const batchEarningsData = [
-  { 
-    id: 1, 
-    name: "Business Bootcamp - Batch 1", 
-    status: "ongoing", 
-    students: 15,
-    teacher: "Jamie Smith",
-    totalSales: 6000,
-    platformEarnings: 1200,
-    teacherEarnings: 1200,
-    studentEarnings: 3600
-  },
-  { 
-    id: 2, 
-    name: "Business Bootcamp - Batch 2", 
-    status: "ongoing", 
-    students: 18,
-    teacher: "Alex Rodriguez",
-    totalSales: 4750,
-    platformEarnings: 950,
-    teacherEarnings: 950,
-    studentEarnings: 2850
-  },
-  { 
-    id: 3, 
-    name: "Entrepreneurship 101", 
-    status: "upcoming", 
-    students: 12,
-    teacher: "Sarah Johnson",
-    totalSales: 0,
-    platformEarnings: 0,
-    teacherEarnings: 0,
-    studentEarnings: 0
-  },
-  { 
-    id: 4, 
-    name: "Business Bootcamp - Batch 0", 
-    status: "completed", 
-    students: 16,
-    teacher: "Jamie Smith",
-    totalSales: 7250,
-    platformEarnings: 1450,
-    teacherEarnings: 1450,
-    studentEarnings: 4350
-  }
-];
-
-// Mock data for teacher earnings
-const teacherEarningsData = [
-  {
-    id: 1,
-    name: 'Jamie Smith',
-    specialization: 'Business Strategy',
-    batches: 2,
-    students: 31,
-    earnings: 2650
-  },
-  {
-    id: 2,
-    name: 'Alex Rodriguez',
-    specialization: 'Marketing',
-    batches: 1,
-    students: 18,
-    earnings: 950
-  },
-  {
-    id: 3,
-    name: 'Sarah Johnson',
-    specialization: 'Entrepreneurship',
-    batches: 1,
-    students: 12,
-    earnings: 0
-  }
-];
-
-// Pie chart data for earning distribution
-const distributionData = [
-  { name: 'Platform', value: 24650, color: '#8884d8' },
-  { name: 'Teachers', value: 24650, color: '#82ca9d' },
-  { name: 'Students', value: 73950, color: '#ffc658' },
-];
-
-// Colors for the pie chart
-const COLORS = ['#8884d8', '#82ca9d', '#ffc658'];
 
 const AdminEarnings = () => {
   const [timeRange, setTimeRange] = useState('30days');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  
+  // State to store data
+  const [totalEarningsData, setTotalEarningsData] = useState({
+    totalEarnings: 0,
+    totalStudentSales: 0,
+    studentCount: 0,
+    teacherCount: 0,
+    batchCount: 0
+  });
+  const [dailyEarningsData, setDailyEarningsData] = useState([]);
+  const [batchEarningsData, setBatchEarningsData] = useState([]);
+  const [teacherEarningsData, setTeacherEarningsData] = useState([]);
+  const [distributionData, setDistributionData] = useState([]);
+  
+  // Fetch data from API
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const response = await axios.get(`http://localhost:5000/api/admin/earnings?timeRange=${timeRange}`);
+        
+        // Update state with received data
+        setTotalEarningsData(response.data.totalEarningsData);
+        setDailyEarningsData(response.data.dailyEarningsData);
+        setBatchEarningsData(response.data.batchEarningsData);
+        setTeacherEarningsData(response.data.teacherEarningsData);
+        setDistributionData(response.data.distributionData);
+        
+        setLoading(false);
+      } catch (err) {
+        console.error('Error fetching earnings data:', err);
+        setError('Failed to load earnings data. Please try again.');
+        setLoading(false);
+      }
+    };
+    
+    fetchData();
+  }, [timeRange]); // Refetch when timeRange changes
   
   // Format date for display
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
+  
+  // Handle export functionality
+  const handleExport = () => {
+    alert('Export functionality would go here');
+    // Implementation would depend on specific export requirements
+  };
+  
+  // Loading state
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-2">Loading earnings data...</span>
+      </div>
+    );
+  }
+  
+  // Error state
+  if (error) {
+    return (
+      <div className="bg-red-50 p-4 rounded-md text-red-700">
+        <p>{error}</p>
+        <Button 
+          variant="outline" 
+          className="mt-2" 
+          onClick={() => window.location.reload()}
+        >
+          Retry
+        </Button>
+      </div>
+    );
+  }
+
+  // Define pie chart colors
+  const COLORS = ['#8884d8', '#82ca9d', '#ffc658'];
 
   return (
     <div className="space-y-6">
@@ -183,7 +146,7 @@ const AdminEarnings = () => {
             </SelectContent>
           </Select>
           
-          <Button variant="outline">
+          <Button variant="outline" onClick={handleExport}>
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
@@ -256,43 +219,49 @@ const AdminEarnings = () => {
             </CardHeader>
             <CardContent>
               <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart
-                    data={dailyEarningsData}
-                    margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis 
-                      dataKey="date" 
-                      tickFormatter={formatDate} 
-                      angle={-45} 
-                      textAnchor="end" 
-                      height={60}
-                    />
-                    <YAxis />
-                    <Tooltip 
-                      formatter={(value) => [`$${value}`, 'Earnings']}
-                      labelFormatter={(label) => `Date: ${formatDate(label)}`}
-                    />
-                    <Legend />
-                    <Line 
-                      type="monotone" 
-                      dataKey="earnings" 
-                      name="Platform Earnings"
-                      stroke="#8884d8" 
-                      activeDot={{ r: 8 }}
-                      strokeWidth={2}
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="studentSales" 
-                      name="Student Sales" 
-                      stroke="#82ca9d" 
-                      strokeWidth={2}
-                      strokeDasharray="5 5"
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
+                {dailyEarningsData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart
+                      data={dailyEarningsData}
+                      margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis 
+                        dataKey="date" 
+                        tickFormatter={formatDate} 
+                        angle={-45} 
+                        textAnchor="end" 
+                        height={60}
+                      />
+                      <YAxis />
+                      <Tooltip 
+                        formatter={(value) => [`$${value}`, 'Earnings']}
+                        labelFormatter={(label) => `Date: ${formatDate(label)}`}
+                      />
+                      <Legend />
+                      <Line 
+                        type="monotone" 
+                        dataKey="earnings" 
+                        name="Platform Earnings"
+                        stroke="#8884d8" 
+                        activeDot={{ r: 8 }}
+                        strokeWidth={2}
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="studentSales" 
+                        name="Student Sales" 
+                        stroke="#82ca9d" 
+                        strokeWidth={2}
+                        strokeDasharray="5 5"
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex items-center justify-center h-full">
+                    <p className="text-muted-foreground">No daily earnings data available</p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -308,38 +277,44 @@ const AdminEarnings = () => {
             </CardHeader>
             <CardContent>
               <div className="h-80 mb-6">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={batchEarningsData}
-                    margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis 
-                      dataKey="name" 
-                      angle={-45} 
-                      textAnchor="end" 
-                      height={60}
-                    />
-                    <YAxis />
-                    <Tooltip formatter={(value) => [`$${value}`, '']} />
-                    <Legend />
-                    <Bar 
-                      dataKey="platformEarnings" 
-                      fill="#8884d8" 
-                      name="Platform Earnings"
-                    />
-                    <Bar 
-                      dataKey="teacherEarnings" 
-                      fill="#82ca9d" 
-                      name="Teacher Earnings"
-                    />
-                    <Bar 
-                      dataKey="studentEarnings" 
-                      fill="#ffc658" 
-                      name="Student Earnings"
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
+                {batchEarningsData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={batchEarningsData}
+                      margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis 
+                        dataKey="name" 
+                        angle={-45} 
+                        textAnchor="end" 
+                        height={60}
+                      />
+                      <YAxis />
+                      <Tooltip formatter={(value) => [`$${value}`, '']} />
+                      <Legend />
+                      <Bar 
+                        dataKey="platformEarnings" 
+                        fill="#8884d8" 
+                        name="Platform Earnings"
+                      />
+                      <Bar 
+                        dataKey="teacherEarnings" 
+                        fill="#82ca9d" 
+                        name="Teacher Earnings"
+                      />
+                      <Bar 
+                        dataKey="studentEarnings" 
+                        fill="#ffc658" 
+                        name="Student Earnings"
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex items-center justify-center h-full">
+                    <p className="text-muted-foreground">No batch earnings data available</p>
+                  </div>
+                )}
               </div>
 
               <Table>
@@ -355,27 +330,35 @@ const AdminEarnings = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {batchEarningsData.map(batch => (
-                    <TableRow key={batch.id}>
-                      <TableCell className="font-medium">{batch.name}</TableCell>
-                      <TableCell>
-                        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                          batch.status === 'ongoing' 
-                            ? 'bg-green-100 text-green-800' 
-                            : batch.status === 'upcoming' 
-                              ? 'bg-blue-100 text-blue-800'
-                              : 'bg-gray-100 text-gray-800'
-                        }`}>
-                          {batch.status}
-                        </span>
+                  {batchEarningsData.length > 0 ? (
+                    batchEarningsData.map(batch => (
+                      <TableRow key={batch.id}>
+                        <TableCell className="font-medium">{batch.name}</TableCell>
+                        <TableCell>
+                          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                            batch.status === 'ongoing' 
+                              ? 'bg-green-100 text-green-800' 
+                              : batch.status === 'upcoming' 
+                                ? 'bg-blue-100 text-blue-800'
+                                : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {batch.status}
+                          </span>
+                        </TableCell>
+                        <TableCell>{batch.teacher}</TableCell>
+                        <TableCell>{batch.students}</TableCell>
+                        <TableCell>${batch.totalSales}</TableCell>
+                        <TableCell>${batch.platformEarnings}</TableCell>
+                        <TableCell>${batch.teacherEarnings}</TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-4">
+                        No batch data available
                       </TableCell>
-                      <TableCell>{batch.teacher}</TableCell>
-                      <TableCell>{batch.students}</TableCell>
-                      <TableCell>${batch.totalSales}</TableCell>
-                      <TableCell>${batch.platformEarnings}</TableCell>
-                      <TableCell>${batch.teacherEarnings}</TableCell>
                     </TableRow>
-                  ))}
+                  )}
                 </TableBody>
               </Table>
             </CardContent>
@@ -392,23 +375,29 @@ const AdminEarnings = () => {
             </CardHeader>
             <CardContent>
               <div className="h-80 mb-6">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={teacherEarningsData}
-                    margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip formatter={(value) => [`$${value}`, 'Earnings']} />
-                    <Legend />
-                    <Bar 
-                      dataKey="earnings" 
-                      name="Earnings" 
-                      fill="#8884d8" 
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
+                {teacherEarningsData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={teacherEarningsData}
+                      margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <Tooltip formatter={(value) => [`$${value}`, 'Earnings']} />
+                      <Legend />
+                      <Bar 
+                        dataKey="earnings" 
+                        name="Earnings" 
+                        fill="#8884d8" 
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex items-center justify-center h-full">
+                    <p className="text-muted-foreground">No teacher earnings data available</p>
+                  </div>
+                )}
               </div>
 
               <Table>
@@ -422,20 +411,28 @@ const AdminEarnings = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {teacherEarningsData.map(teacher => (
-                    <TableRow key={teacher.id}>
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-2">
-                          <School className="h-4 w-4 text-muted-foreground" />
-                          {teacher.name}
-                        </div>
+                  {teacherEarningsData.length > 0 ? (
+                    teacherEarningsData.map(teacher => (
+                      <TableRow key={teacher.id}>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-2">
+                            <School className="h-4 w-4 text-muted-foreground" />
+                            {teacher.name}
+                          </div>
+                        </TableCell>
+                        <TableCell>{teacher.specialization}</TableCell>
+                        <TableCell>{teacher.batches}</TableCell>
+                        <TableCell>{teacher.students}</TableCell>
+                        <TableCell>${teacher.earnings}</TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-4">
+                        No teacher data available
                       </TableCell>
-                      <TableCell>{teacher.specialization}</TableCell>
-                      <TableCell>{teacher.batches}</TableCell>
-                      <TableCell>{teacher.students}</TableCell>
-                      <TableCell>${teacher.earnings}</TableCell>
                     </TableRow>
-                  ))}
+                  )}
                 </TableBody>
               </Table>
             </CardContent>
@@ -452,26 +449,32 @@ const AdminEarnings = () => {
             </CardHeader>
             <CardContent>
               <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={distributionData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                      outerRadius={120}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {distributionData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value) => [`$${value}`, '']} />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
+                {distributionData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={distributionData}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                        outerRadius={120}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {distributionData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value) => [`$${value}`, '']} />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex items-center justify-center h-full">
+                    <p className="text-muted-foreground">No distribution data available</p>
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">

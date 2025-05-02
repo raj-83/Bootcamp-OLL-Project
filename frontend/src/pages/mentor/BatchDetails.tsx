@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -14,101 +14,67 @@ import TaskSubmissionViewer from '@/components/mentor/TaskSubmissionViewer';
 import { Calendar, Clock, DollarSign, Users, School, Check, Plus, File, Calendar as CalendarIcon, Video } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+import { getTasksByBatchId, createTask, updateTask, deleteTask } from '@/services/taskService.js'; // Adjust the import path as necessary
+import axios from 'axios';
 
-const mockBatchData = {
-  id: 1,
-  name: 'School Entrepreneurship - Batch 1',
-  description: 'Comprehensive program for aspiring entrepreneurs covering school planning, marketing, and operations.',
-  startDate: '2023-09-01',
-  endDate: '2023-12-15',
-  students: 25,
-  progress: 65,
-  teacher: 'Jamie Smith',
-  daysPerWeek: ['Monday', 'Wednesday', 'Friday'],
-  time: '3:00 PM - 5:00 PM',
-  totalRevenue: 3400,
-  teacherEarnings: 680, // 20% of total
-  ollShare: 1020, // 30% of total
-  studentEarnings: 1700, // 50% of total
-  studentsList: [
-    { id: 1, name: 'Alex Johnson', attendance: 90, taskCompletion: 85, earnings: 345 },
-    { id: 2, name: 'Morgan Smith', attendance: 75, taskCompletion: 80, earnings: 290 },
-    { id: 3, name: 'Jamie Lee', attendance: 95, taskCompletion: 95, earnings: 420 },
-    { id: 4, name: 'Taylor Swift', attendance: 85, taskCompletion: 70, earnings: 210 },
-    { id: 5, name: 'Miguel Santos', attendance: 80, taskCompletion: 75, earnings: 190 }
-  ]
-};
-
+// Initial task data - later we'll replace with API
 const initialTasks = [
   { id: 1, title: 'Create School Plan', dueDate: '2023-10-15', status: 'completed', description: 'Develop a comprehensive school plan outlining your product/service, target market, and competitive advantage.' },
   { id: 2, title: 'Market Research', dueDate: '2023-10-30', status: 'in-progress', description: 'Conduct market research to identify your target audience and understand their needs and preferences.' },
   { id: 3, title: 'Financial Projections', dueDate: '2023-11-15', status: 'not-started', description: 'Create financial projections for your school, including revenue forecasts, expenses, and break-even analysis.' }
 ];
 
-const mockSessions = [
-  { 
-    id: 1, 
-    title: "Business Idea Brainstorming", 
-    date: "2023-09-05",
-    time: "3:00 PM - 5:00 PM",
-    status: "completed", 
-    attendanceRate: 92,
-    notes: "Students developed initial business concepts through guided ideation exercises."
-  },
-  { 
-    id: 2, 
-    title: "Marketing Fundamentals", 
-    date: "2023-09-12",
-    time: "3:00 PM - 5:00 PM",
-    status: "completed", 
-    attendanceRate: 88,
-    notes: "Covered target market identification, value proposition, and basic marketing channels."
-  },
-  { 
-    id: 3, 
-    title: "Financial Planning", 
-    date: "2023-09-19",
-    time: "3:00 PM - 5:00 PM",
-    status: "completed", 
-    attendanceRate: 96,
-    notes: "Reviewed pricing strategies, cost structures, and profit margin calculation."
-  },
-  { 
-    id: 4, 
-    title: "Product Development", 
-    date: "2023-09-26",
-    time: "3:00 PM - 5:00 PM",
-    status: "upcoming",
-    notes: "Will cover prototyping, minimum viable product, and iteration techniques."
-  },
-  { 
-    id: 5, 
-    title: "Sales Techniques", 
-    date: "2023-10-03",
-    time: "3:00 PM - 5:00 PM",
-    status: "upcoming",
-    notes: "Will focus on persuasion, objection handling, and closing techniques."
-  }
-];
-
 const BatchDetails = () => {
   const { batchId } = useParams();
-  const [tasks, setTasks] = useState(initialTasks);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [batchData, setBatchData] = useState(null);
+  const [sessions, setSessions] = useState([]);
+  const [teacherName, setTeacherName] = useState('');
+  const [studentNames, setStudentNames] = useState({}); 
+  const [tasks, setTasks] = useState([]);
   const [showAddTaskDialog, setShowAddTaskDialog] = useState(false);
+  const [showEditTaskDialog, setShowEditTaskDialog] = useState(false);
+  const [currentTask, setCurrentTask] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [newTask, setNewTask] = useState({
     title: '',
     dueDate: '',
-    description: ''
+    description: '',
+    batch: batchId,
   });
-  const [activeSubmissionTab, setActiveSubmissionTab] = useState<'tasks' | 'submissions'>('tasks');
-  const [selectedSubmissionId, setSelectedSubmissionId] = useState<number | null>(null);
+  const [activeSubmissionTab, setActiveSubmissionTab] = useState('tasks');
+  const [selectedSubmissionId, setSelectedSubmissionId] = useState(null);
   
+  // Mock data for submissions - replace with API later
   const mockSubmissions = [
     { id: 1, studentName: 'Alex Johnson', taskTitle: 'Create School Plan', submittedAt: '2023-10-14T09:30:00', status: 'pending_review' },
     { id: 2, studentName: 'Morgan Smith', taskTitle: 'Market Research', submittedAt: '2023-10-08T14:15:00', status: 'approved' },
     { id: 3, studentName: 'Jamie Lee', taskTitle: 'Create School Plan', submittedAt: '2023-10-13T11:45:00', status: 'needs_revision' },
   ];
+
+  // Calculate revenue breakdown based on batch data
+  const calculateRevenueBreakdown = (batchRevenue) => {
+    const total = batchRevenue || 0;
+    const studentEarnings = total * 0.5; // 50% to students
+    const teacherEarnings = total * 0.2; // 20% to teacher
+    const ollShare = total * 0.3; // 30% to OLL
+    
+    return {
+      total,
+      studentEarnings,
+      teacherEarnings,
+      ollShare
+    };
+  };
   
+  // Format date string from DB to readable format
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return format(date, 'yyyy-MM-dd');
+  };
+
   const handleAddTask = () => {
     if (!newTask.title || !newTask.dueDate) {
       toast({
@@ -118,35 +84,174 @@ const BatchDetails = () => {
       });
       return;
     }
-    
-    const task = {
-      id: tasks.length + 1,
-      title: newTask.title,
-      dueDate: newTask.dueDate,
-      status: 'not-started',
-      description: newTask.description
-    };
-    
-    setTasks([...tasks, task]);
-    setNewTask({ title: '', dueDate: '', description: '' });
     setShowAddTaskDialog(false);
-    
+    createTask(newTask)
     toast({
       title: "Task added",
       description: "New task has been successfully added to the batch."
     });
   };
+
+  // Format time from DB format
+  const formatSessionTime = (timeString) => {
+    if (!timeString) return 'N/A';
+    return timeString;
+  };
+
+  // Get session status based on date
+  const getSessionStatus = (sessionDate) => {
+    const today = new Date();
+    const sessionDay = new Date(sessionDate);
+    return today > sessionDay ? 'completed' : 'upcoming';
+  };
+
+  // Fetch batch data
+  useEffect(() => {
+    const fetchBatchData = async () => {
+      try {
+        setLoading(true);
+        const response = await axios.get(`http://localhost:5000/api/batches/${batchId}`);
+        const batch = response.data;
   
-  const handleViewSubmission = (submissionId: number) => {
+        // 1️⃣ teacher as before
+        if (batch.teacher) {
+          const { data: t } = await axios.get(`http://localhost:5000/api/teachers/${batch.teacher}`);
+          setTeacherName(t.name);
+        }
+  
+        // 2️⃣ now pull student names
+        if (batch.students && batch.students.length > 0) {
+          // build up a map { id: name }
+          const namesMap = {};
+          await Promise.all(
+            batch.students.map(async (studId) => {
+              try {
+                const { data: s } = await axios.get(`http://localhost:5000/api/students/${studId}`);
+                namesMap[studId] = s.name;
+              } catch {
+                namesMap[studId] = 'Unknown';
+              }
+            })
+          );
+          setStudentNames(namesMap);
+        }
+  
+        setBatchData(batch);
+      } catch (err) {
+        console.error('Error fetching batch data:', err);
+        setError('Failed to load batch data');
+        toast({
+          title: 'Error',
+          description: 'Failed to load batch data',
+          variant: 'destructive'
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+  
+    const fetchSessions = async () => {
+      try {
+        const response = await axios.get(`http://localhost:5000/api/sessions/batch/${batchId}`);
+        setSessions(response.data);
+      } catch (err) {
+        console.error('Error fetching sessions:', err);
+      }
+    };
+  
+    if (batchId) {
+      fetchBatchData();
+      fetchSessions();
+    }
+  }, [batchId]);
+
+  const fetchTasks = async () => {
+    try {
+      setIsLoading(true);
+      const taskData = await getTasksByBatchId(batchId);
+      setTasks(taskData);
+    } catch (error) {
+      console.error('Error fetching tasks:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load tasks",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (batchId) {
+      fetchTasks();
+    }
+  }, [batchId]);
+
+  const openEditDialog = (task) => {
+    setCurrentTask(task);
+    setShowEditTaskDialog(true);
+  };
+
+  // Format date to display
+  const formatDateDisplay = (dateString) => {
+    if (!dateString) return 'N/A';
+    return format(new Date(dateString), 'yyyy-MM-dd');
+  };
+
+  // Format date for input fields
+  const formatDateForInput = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toISOString().split('T')[0];
+  };
+
+  // Get appropriate status badge styling
+  const getStatusBadgeVariant = (status) => {
+    switch (status) {
+      case 'completed':
+        return { variant: 'default', className: 'bg-green-500 hover:bg-green-600' };
+      case 'in-progress':
+        return { variant: 'outline', className: '' };
+      default:
+        return { variant: 'secondary', className: '' };
+    }
+  };
+
+  if (isLoading) {
+    return <div className="text-center py-4">Loading tasks...</div>;
+  }
+  
+  const handleViewSubmission = (submissionId) => {
     setSelectedSubmissionId(submissionId);
     setActiveSubmissionTab('submissions');
   };
+
+  // For loading state
+  if (loading) {
+    return <div className="flex justify-center items-center h-64">Loading batch details...</div>;
+  }
+
+  // For error state
+  if (error) {
+    return <div className="text-red-500">{error}</div>;
+  }
+
+  // If no batch data is found
+  if (!batchData) {
+    return <div>No batch data found</div>;
+  }
+
+  const revenueData = calculateRevenueBreakdown(batchData.revenue);
   
+  // Calculate batch progress (kept as is for now)
+  const batchProgress = 65; // Mock progress value
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold mb-2">{mockBatchData.name}</h1>
-        <p className="text-muted-foreground">{mockBatchData.description}</p>
+        <h1 className="text-2xl font-bold mb-2">{batchData.batchName}</h1>
+        <p className="text-muted-foreground">{batchData.sessionTopic || 'No description available'}</p>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -158,8 +263,8 @@ const BatchDetails = () => {
             <div className="text-2xl font-bold flex items-center">
               <Calendar className="h-5 w-5 mr-2 text-primary" />
               <div>
-                <div>{mockBatchData.startDate}</div>
-                <div className="text-sm text-muted-foreground">to {mockBatchData.endDate}</div>
+                <div>{formatDate(batchData.startDate)}</div>
+                <div className="text-sm text-muted-foreground">to {formatDate(batchData.endDate)}</div>
               </div>
             </div>
           </CardContent>
@@ -173,8 +278,8 @@ const BatchDetails = () => {
             <div className="text-2xl font-bold flex items-center">
               <Clock className="h-5 w-5 mr-2 text-primary" />
               <div>
-                <div className="text-base">{mockBatchData.daysPerWeek.join(', ')}</div>
-                <div className="text-sm text-muted-foreground">{mockBatchData.time}</div>
+                <div className="text-base">{batchData.scheduleDays ? batchData.scheduleDays.join(', ') : 'N/A'}</div>
+                <div className="text-sm text-muted-foreground">{batchData.sessionTime || 'N/A'}</div>
               </div>
             </div>
           </CardContent>
@@ -187,7 +292,7 @@ const BatchDetails = () => {
           <CardContent>
             <div className="text-2xl font-bold flex items-center">
               <Users className="h-5 w-5 mr-2 text-primary" />
-              {mockBatchData.students}
+              {batchData.students ? batchData.students.length : 0}
             </div>
           </CardContent>
         </Card>
@@ -197,11 +302,11 @@ const BatchDetails = () => {
             <CardTitle className="text-sm font-medium text-muted-foreground">Batch Progress</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{mockBatchData.progress}%</div>
+            <div className="text-2xl font-bold">{batchProgress}%</div>
             <div className="w-full h-2 bg-muted rounded-full mt-2">
               <div 
                 className="h-full bg-primary rounded-full" 
-                style={{ width: `${mockBatchData.progress}%` }}
+                style={{ width: `${batchProgress}%` }}
               />
             </div>
           </CardContent>
@@ -222,7 +327,7 @@ const BatchDetails = () => {
               <CardContent>
                 <div className="text-2xl font-bold text-green-600 flex items-center">
                   <DollarSign className="h-5 w-5 mr-1" />
-                  {mockBatchData.studentEarnings}
+                  {revenueData.studentEarnings}
                 </div>
               </CardContent>
             </Card>
@@ -234,7 +339,7 @@ const BatchDetails = () => {
               <CardContent>
                 <div className="text-2xl font-bold text-blue-600 flex items-center">
                   <DollarSign className="h-5 w-5 mr-1" />
-                  {mockBatchData.teacherEarnings}
+                  {revenueData.teacherEarnings}
                 </div>
               </CardContent>
             </Card>
@@ -246,7 +351,7 @@ const BatchDetails = () => {
               <CardContent>
                 <div className="text-2xl font-bold text-purple-600 flex items-center">
                   <DollarSign className="h-5 w-5 mr-1" />
-                  {mockBatchData.ollShare}
+                  {revenueData.ollShare}
                 </div>
               </CardContent>
             </Card>
@@ -268,7 +373,7 @@ const BatchDetails = () => {
               />
             </div>
             <div className="flex justify-between mt-2 text-sm text-muted-foreground">
-              <span>Total Revenue: ${mockBatchData.totalRevenue}</span>
+              <span>Total Revenue: ${revenueData.total}</span>
             </div>
           </div>
         </CardContent>
@@ -296,7 +401,7 @@ const BatchDetails = () => {
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Teacher</p>
-                      <p className="font-medium">{mockBatchData.teacher}</p>
+                      <p className="font-medium">{teacherName}</p>
                     </div>
                   </div>
                   
@@ -306,7 +411,9 @@ const BatchDetails = () => {
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Duration</p>
-                      <p className="font-medium">{mockBatchData.startDate} to {mockBatchData.endDate}</p>
+                      <p className="font-medium">
+                        {formatDate(batchData.startDate)} to {formatDate(batchData.endDate)}
+                      </p>
                     </div>
                   </div>
                   
@@ -316,7 +423,9 @@ const BatchDetails = () => {
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Schedule</p>
-                      <p className="font-medium">{mockBatchData.daysPerWeek.join(', ')} at {mockBatchData.time}</p>
+                      <p className="font-medium">
+                        {batchData.scheduleDays ? batchData.scheduleDays.join(', ') : 'Not set'} at {batchData.sessionTime || 'Not set'}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -332,12 +441,12 @@ const BatchDetails = () => {
                   <div>
                     <div className="flex justify-between mb-1">
                       <span className="text-sm text-muted-foreground">Overall Progress</span>
-                      <span className="text-sm font-medium">{mockBatchData.progress}%</span>
+                      <span className="text-sm font-medium">{batchProgress}%</span>
                     </div>
                     <div className="w-full h-2 bg-muted rounded-full">
                       <div 
                         className="h-full bg-primary rounded-full" 
-                        style={{ width: `${mockBatchData.progress}%` }}
+                        style={{ width: `${batchProgress}%` }}
                       />
                     </div>
                   </div>
@@ -387,81 +496,99 @@ const BatchDetails = () => {
         </TabsContent>
         
         <TabsContent value="students" className="mt-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle>Students in Batch</CardTitle>
-              <Button variant="outline" size="sm">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Student
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Student Name</TableHead>
-                    <TableHead>Attendance</TableHead>
-                    <TableHead>Task Completion</TableHead>
-                    <TableHead>Earnings</TableHead>
-                    <TableHead>Status</TableHead>
+      <Card>
+        <CardHeader className="flex items-center justify-between pb-2">
+          <CardTitle>Students in Batch</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Student Name</TableHead>
+                <TableHead>Attendance</TableHead>
+                <TableHead>Task Completion</TableHead>
+                <TableHead>Earnings</TableHead>
+                <TableHead>Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {batchData?.students?.length ? (
+                batchData.students.map(student => (
+                  <TableRow key={student}>
+                    {/* lookup via studentNames map */}
+                    <TableCell className="font-medium">
+                      {studentNames[student] || 'Loading...'}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <div className="w-full max-w-24">
+                          <div className="h-2 w-full bg-muted rounded-full">
+                            <div
+                              className={`h-full rounded-full ${
+                                (student.attendance || 0) >= 90
+                                  ? 'bg-green-500'
+                                  : (student.attendance || 0) >= 75
+                                  ? 'bg-amber-500'
+                                  : 'bg-destructive'
+                              }`}
+                              style={{ width: `${student.attendance || 0}%` }}
+                            />
+                          </div>
+                        </div>
+                        <span className="text-xs">{student.attendance || 0}%</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <div className="w-full max-w-24">
+                          <div className="h-2 w-full bg-muted rounded-full">
+                            <div
+                              className={`h-full rounded-full ${
+                                (student.taskCompletion || 0) >= 90
+                                  ? 'bg-green-500'
+                                  : (student.taskCompletion || 0) >= 75
+                                  ? 'bg-amber-500'
+                                  : 'bg-destructive'
+                              }`}
+                              style={{ width: `${student.taskCompletion || 0}%` }}
+                            />
+                          </div>
+                        </div>
+                        <span className="text-xs">{student.taskCompletion || 0}%</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center">
+                        <DollarSign className="h-4 w-4 mr-1 text-green-500" />
+                        ${student.earning || 0}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="outline"
+                        className={
+                          student.status === 'active'
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-gray-100 text-gray-800'
+                        }
+                      >
+                        {student.status || 'Active'}
+                      </Badge>
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {mockBatchData.studentsList.map(student => (
-                    <TableRow key={student.id}>
-                      <TableCell className="font-medium">{student.name}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <div className="w-full max-w-24">
-                            <div className="h-2 w-full bg-muted rounded-full">
-                              <div 
-                                className={`h-full bg-muted rounded-full ${
-                                  student.attendance >= 90 ? 'bg-green-500' : 
-                                  student.attendance >= 75 ? 'bg-amber-500' : 
-                                  'bg-destructive'
-                                }`}
-                                style={{ width: `${student.attendance}%` }}
-                              />
-                            </div>
-                          </div>
-                          <span className="text-xs">{student.attendance}%</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <div className="w-full max-w-24">
-                            <div className="h-2 w-full bg-muted rounded-full">
-                              <div 
-                                className={`h-full bg-muted rounded-full ${
-                                  student.taskCompletion >= 90 ? 'bg-green-500' : 
-                                  student.taskCompletion >= 75 ? 'bg-amber-500' : 
-                                  'bg-destructive'
-                                }`}
-                                style={{ width: `${student.taskCompletion}%` }}
-                              />
-                            </div>
-                          </div>
-                          <span className="text-xs">{student.taskCompletion}%</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center">
-                          <DollarSign className="h-4 w-4 mr-1 text-green-500" />
-                          ${student.earnings}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="bg-green-100 text-green-800 hover:bg-green-100">
-                          Active
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-4">
+                    No students in this batch
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </TabsContent>
         
         <TabsContent value="tasks" className="mt-6">
           <div className="flex justify-between items-center mb-4">
@@ -472,7 +599,7 @@ const BatchDetails = () => {
             </Button>
           </div>
           
-          <Tabs value={activeSubmissionTab} onValueChange={(value) => setActiveSubmissionTab(value as 'tasks' | 'submissions')}>
+          <Tabs value={activeSubmissionTab} onValueChange={(value) => setActiveSubmissionTab(value)}>
             <TabsList className="mb-4">
               <TabsTrigger value="tasks">Tasks</TabsTrigger>
               <TabsTrigger value="submissions">Submissions</TabsTrigger>
@@ -499,7 +626,7 @@ const BatchDetails = () => {
                             </div>
                             <div>
                               <h4 className="font-medium">{task.title}</h4>
-                              <p className="text-sm text-muted-foreground">Due: {task.dueDate}</p>
+                              <p className="text-sm text-muted-foreground">Due: {formatDate(task.dueDate)}</p>
                             </div>
                           </div>
                           <p className="text-sm mt-3">{task.description}</p>
@@ -516,7 +643,7 @@ const BatchDetails = () => {
                              task.status === 'in-progress' ? 'In Progress' : 
                              'Not Started'}
                           </Badge>
-                          <Button variant="outline" size="sm">Edit</Button>
+                          <Button onClick={openEditDialog} variant="outline" size="sm">Edit</Button>
                           <Button variant="outline" size="sm" onClick={() => setActiveSubmissionTab('submissions')}>
                             View Submissions
                           </Button>
@@ -603,6 +730,57 @@ const BatchDetails = () => {
               )}
             </TabsContent>
           </Tabs>
+
+          <Dialog open={showEditTaskDialog} onOpenChange={setShowEditTaskDialog}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Edit Task</DialogTitle>
+                <DialogDescription>
+                  Edit task for students in this batch.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="title">Task Title</Label>
+                  <Input 
+                    id="title" 
+                    placeholder="Enter task title"
+                    value={newTask.title}
+                    onChange={(e) => setNewTask({...newTask, title: e.target.value})}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="dueDate">Due Date</Label>
+                  <Input 
+                    id="dueDate" 
+                    type="date"
+                    value={newTask.dueDate}
+                    onChange={(e) => setNewTask({...newTask, dueDate: e.target.value})}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea 
+                    id="description" 
+                    placeholder="Enter task description"
+                    value={newTask.description}
+                    onChange={(e) => setNewTask({...newTask, description: e.target.value})}
+                  />
+                </div>
+              </div>
+              
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowAddTaskDialog(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleAddTask}>
+                  Edit Task
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
           
           <Dialog open={showAddTaskDialog} onOpenChange={setShowAddTaskDialog}>
             <DialogContent>
@@ -612,7 +790,6 @@ const BatchDetails = () => {
                   Create a new task for students in this batch.
                 </DialogDescription>
               </DialogHeader>
-              
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
                   <Label htmlFor="title">Task Title</Label>
@@ -657,7 +834,7 @@ const BatchDetails = () => {
           </Dialog>
         </TabsContent>
         
-        <TabsContent value="sessions" className="mt-6">
+        {/* <TabsContent value="sessions" className="mt-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle>Batch Sessions</CardTitle>
@@ -723,7 +900,7 @@ const BatchDetails = () => {
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
+        </TabsContent> */}
       </Tabs>
     </div>
   );

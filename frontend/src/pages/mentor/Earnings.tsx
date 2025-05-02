@@ -1,5 +1,5 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
@@ -25,58 +25,78 @@ import {
   Line, 
   Legend 
 } from 'recharts';
-import { DollarSign, TrendingUp, Calendar, BarChart3, PieChart as PieChartIcon } from 'lucide-react';
+import { DollarSign, TrendingUp, Calendar, BarChart3, PieChart as PieChartIcon, Loader2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
-// Mock data
-const earningsData = {
-  totalEarnings: 2450,
-  pendingEarnings: 350,
-  lastMonth: 650,
-  lastWeek: 180,
-  batches: [
-    { id: 1, name: "Business Bootcamp - Batch 1", earnings: 1200, studentCount: 15 },
-    { id: 2, name: "Business Bootcamp - Batch 2", earnings: 950, studentCount: 18 },
-    { id: 3, name: "Entrepreneurship 101", earnings: 0, studentCount: 12 },
-    { id: 4, name: "Business Bootcamp - Batch 0", earnings: 300, studentCount: 16 },
-  ],
-  monthlyData: [
-    { name: 'Jan', earnings: 150 },
-    { name: 'Feb', earnings: 300 },
-    { name: 'Mar', earnings: 200 },
-    { name: 'Apr', earnings: 400 },
-    { name: 'May', earnings: 580 },
-    { name: 'Jun', earnings: 820 },
-  ],
-  weeklyData: [
-    { name: 'Mon', earnings: 45 },
-    { name: 'Tue', earnings: 30 },
-    { name: 'Wed', earnings: 60 },
-    { name: 'Thu', earnings: 75 },
-    { name: 'Fri', earnings: 90 },
-    { name: 'Sat', earnings: 120 },
-    { name: 'Sun', earnings: 40 },
-  ],
-  dailyTransactions: [
-    { date: '2023-06-01', student: 'Alex Johnson', batch: 'Business Bootcamp - Batch 1', amount: 25, commission: 5 },
-    { date: '2023-06-02', student: 'Samantha Lee', batch: 'Business Bootcamp - Batch 1', amount: 40, commission: 8 },
-    { date: '2023-06-03', student: 'Miguel Santos', batch: 'Business Bootcamp - Batch 2', amount: 35, commission: 7 },
-    { date: '2023-06-04', student: 'Emma Wilson', batch: 'Business Bootcamp - Batch 2', amount: 50, commission: 10 },
-    { date: '2023-06-05', student: 'Jayden Brown', batch: 'Business Bootcamp - Batch 1', amount: 45, commission: 9 },
-    { date: '2023-06-06', student: 'Sophia Chen', batch: 'Business Bootcamp - Batch 2', amount: 30, commission: 6 },
-    { date: '2023-06-07', student: 'Ethan Miller', batch: 'Business Bootcamp - Batch 1', amount: 55, commission: 11 },
-  ]
-};
-
+// Colors for the charts
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
 const MentorEarnings = () => {
   const [timeframe, setTimeframe] = useState('monthly');
   const [batchFilter, setBatchFilter] = useState('all');
+  const [earningsData, setEarningsData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const filteredTransactions = batchFilter === 'all' 
+  useEffect(() => {
+    const fetchEarningsData = async () => {
+      try {
+        setLoading(true);
+        const teacherId = localStorage.getItem('id');
+        
+        if (!teacherId) {
+          throw new Error('Teacher ID not found in localStorage');
+        }
+
+        const response = await axios.get(`http://localhost:5000/api/earnings/teacher/${teacherId}`);
+        setEarningsData(response.data);
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching earnings data:', err);
+        setError('Failed to load earnings data. Please try again later.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchEarningsData();
+  }, []);
+
+  // Filter transactions based on selected batch
+  const filteredTransactions = earningsData && (batchFilter === 'all' 
     ? earningsData.dailyTransactions
-    : earningsData.dailyTransactions.filter(t => t.batch.includes(batchFilter));
+    : earningsData.dailyTransactions.filter(t => t.batch.includes(batchFilter)));
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="flex flex-col items-center gap-2">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">Loading earnings data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <Alert variant="destructive" className="my-4">
+        <AlertDescription>{error}</AlertDescription>
+      </Alert>
+    );
+  }
+
+  if (!earningsData) {
+    return (
+      <div className="text-center p-8">
+        <h2 className="text-xl font-semibold">No earnings data available</h2>
+        <p className="text-muted-foreground mt-2">
+          Start mentoring students to see your earnings here.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -90,8 +110,11 @@ const MentorEarnings = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Batches</SelectItem>
-              <SelectItem value="Batch 1">Batch 1</SelectItem>
-              <SelectItem value="Batch 2">Batch 2</SelectItem>
+              {earningsData.batches.map(batch => (
+                <SelectItem key={batch.id} value={batch.name}>
+                  {batch.name}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -103,7 +126,7 @@ const MentorEarnings = () => {
             <CardDescription>Total Earnings</CardDescription>
             <CardTitle className="text-3xl flex items-center">
               <DollarSign className="mr-2 h-6 w-6 text-success" />
-              ${earningsData.totalEarnings}
+              ${earningsData.totalEarnings.toFixed(2)}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -118,7 +141,7 @@ const MentorEarnings = () => {
             <CardDescription>Pending Earnings</CardDescription>
             <CardTitle className="text-3xl flex items-center">
               <DollarSign className="mr-2 h-6 w-6 text-warning" />
-              ${earningsData.pendingEarnings}
+              ${earningsData.pendingEarnings.toFixed(2)}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -133,7 +156,7 @@ const MentorEarnings = () => {
             <CardDescription>Last Month</CardDescription>
             <CardTitle className="text-3xl flex items-center">
               <Calendar className="mr-2 h-6 w-6 text-blue-500" />
-              ${earningsData.lastMonth}
+              ${earningsData.lastMonth.toFixed(2)}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -148,7 +171,7 @@ const MentorEarnings = () => {
             <CardDescription>Last Week</CardDescription>
             <CardTitle className="text-3xl flex items-center">
               <TrendingUp className="mr-2 h-6 w-6 text-primary" />
-              ${earningsData.lastWeek}
+              ${earningsData.lastWeek.toFixed(2)}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -255,13 +278,13 @@ const MentorEarnings = () => {
                         fill="#8884d8"
                         dataKey="earnings"
                         nameKey="name"
-                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                        label={({ name, percent }) => `${name.split(' - ')[1] || name}: ${(percent * 100).toFixed(0)}%`}
                       >
                         {earningsData.batches.map((_, index) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Pie>
-                      <Tooltip formatter={(value) => [`$${value}`, 'Earnings']} />
+                      <Tooltip formatter={(value) => [`$${value.toFixed(2)}`, 'Earnings']} />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
@@ -288,7 +311,7 @@ const MentorEarnings = () => {
                       <YAxis yAxisId="left" orientation="left" stroke="#8884d8" />
                       <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" />
                       <Tooltip formatter={(value, name) => [
-                        name === 'earnings' ? `$${value}` : value,
+                        name === 'earnings' ? `$${value.toFixed(2)}` : value,
                         name === 'earnings' ? 'Earnings' : 'Student Count'
                       ]} />
                       <Legend />
@@ -340,7 +363,7 @@ const MentorEarnings = () => {
                           ? (batch.earnings / batch.studentCount).toFixed(2) 
                           : '0.00'}
                       </TableCell>
-                      <TableCell className="text-right font-medium">${batch.earnings}</TableCell>
+                      <TableCell className="text-right font-medium">${batch.earnings.toFixed(2)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -367,21 +390,21 @@ const MentorEarnings = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredTransactions.map((transaction, index) => (
+                  {filteredTransactions && filteredTransactions.map((transaction, index) => (
                     <TableRow key={index}>
                       <TableCell>{transaction.date}</TableCell>
                       <TableCell className="font-medium">{transaction.student}</TableCell>
                       <TableCell>{transaction.batch}</TableCell>
-                      <TableCell>${transaction.amount}</TableCell>
+                      <TableCell>${transaction.amount.toFixed(2)}</TableCell>
                       <TableCell className="text-right text-success font-medium">
-                        ${transaction.commission}
+                        ${transaction.commission.toFixed(2)}
                       </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
               
-              {filteredTransactions.length === 0 && (
+              {(!filteredTransactions || filteredTransactions.length === 0) && (
                 <div className="text-center py-8 text-muted-foreground">
                   No transactions found for the selected batch.
                 </div>

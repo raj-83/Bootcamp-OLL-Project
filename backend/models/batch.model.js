@@ -8,12 +8,12 @@ const batchSchema = new mongoose.Schema({
     },
     teacher: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Teacher',  // Reference to Teacher model
+        ref: 'Teacher',
         required: false
     },
     students: [{
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Student'   // Array of Student ObjectIds
+        ref: 'Student'
     }],
     startDate: Date,
     endDate: Date,
@@ -22,7 +22,11 @@ const batchSchema = new mongoose.Schema({
     sessionTopic: String,
     session: [{
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Session'  // Reference to Session model
+        ref: 'Session'
+    }],
+    tasks: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Task'
     }],
     totalStudents: {
         type: Number,
