@@ -24,7 +24,12 @@ const MentorProfile = () => {
     specialization: "",
     totalStudents: 0,
     rating: 0,
-    students: []
+    students: [],
+    joiningDate: "",
+    status: "unknown", // Default value for status
+    totalBatches: 0, // Default value for totalBatches
+    currentBatches: 0, // Default value for currentBatches
+    totalEarnings: 0 // Default value for totalEarnings
   });
   
   // State for student data

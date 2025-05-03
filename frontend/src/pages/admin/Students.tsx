@@ -203,7 +203,7 @@ const AdminStudents = () => {
         name: student.name,
         email: student.email,
         phone: student.phone,
-        batches: batchName, // Use batch name for display
+        batches: batchName ? [batchName] : [], // Wrap batch name in an array
         age: student.age?.toString() || '',
         school: student.school || ''
       });
@@ -654,7 +654,7 @@ const AdminStudents = () => {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Assign to Batch</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={(value) => field.onChange(value)} defaultValue={field.value?.[0] || ''}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select a batch" />
@@ -783,7 +783,7 @@ const AdminStudents = () => {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Assigned Batch</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value[0] || ''}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select a batch" />

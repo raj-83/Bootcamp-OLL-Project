@@ -284,7 +284,7 @@ const MentorEarnings = () => {
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Pie>
-                      <Tooltip formatter={(value) => [`$${value.toFixed(2)}`, 'Earnings']} />
+                      <Tooltip formatter={(value) => (typeof value === 'number' ? [`$${value.toFixed(2)}`, 'Earnings'] : [value, 'Earnings'])} />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
@@ -311,7 +311,7 @@ const MentorEarnings = () => {
                       <YAxis yAxisId="left" orientation="left" stroke="#8884d8" />
                       <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" />
                       <Tooltip formatter={(value, name) => [
-                        name === 'earnings' ? `$${value.toFixed(2)}` : value,
+                        name === 'earnings' && typeof value === 'number' ? `$${value.toFixed(2)}` : value,
                         name === 'earnings' ? 'Earnings' : 'Student Count'
                       ]} />
                       <Legend />

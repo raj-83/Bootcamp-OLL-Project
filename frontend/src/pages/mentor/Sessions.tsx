@@ -814,7 +814,7 @@ const Sessions = () => {
             <Button
               variant="destructive"
               onClick={() =>
-                sessionToDelete && handleDeleteSession(sessionToDelete)
+                sessionToDelete && handleDeleteSession
               }
             >
               <Trash2 className="h-4 w-4 mr-2" />

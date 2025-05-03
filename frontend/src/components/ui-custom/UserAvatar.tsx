@@ -1,6 +1,6 @@
 import React from "react";
 
-const UserAvatar = ({ name, size = "md", className = "" }) => {
+const UserAvatar = ({ name, size = "md", className = "", highlight = false }) => {
   // Default to a placeholder if no name is provided
   const initials = name 
     ? name.split(' ')
@@ -9,7 +9,7 @@ const UserAvatar = ({ name, size = "md", className = "" }) => {
         .toUpperCase()
         .substring(0, 2)
     : "?";
-
+  
   // Size classes
   const sizeClasses = {
     xs: "h-8 w-8 text-xs",
@@ -18,7 +18,7 @@ const UserAvatar = ({ name, size = "md", className = "" }) => {
     lg: "h-16 w-16 text-lg",
     xl: "h-24 w-24 text-xl"
   };
-
+  
   // Generate a consistent color based on the name (if provided)
   const colors = [
     "bg-blue-500",
@@ -35,10 +35,13 @@ const UserAvatar = ({ name, size = "md", className = "" }) => {
   const colorIndex = name 
     ? name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length
     : 0;
-
+    
+  // Add highlight border if highlighted
+  const highlightClass = highlight ? "ring-2 ring-yellow-400 ring-offset-2 ring-offset-white" : "";
+  
   return (
     <div
-      className={`${sizeClasses[size] || sizeClasses.md} ${colors[colorIndex]} rounded-full flex items-center justify-center text-white font-semibold ${className}`}
+      className={`${sizeClasses[size] || sizeClasses.md} ${colors[colorIndex]} rounded-full flex items-center justify-center text-white font-semibold ${highlightClass} ${className}`}
       aria-label={name || "User"}
     >
       {initials}
