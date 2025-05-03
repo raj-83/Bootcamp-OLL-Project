@@ -1,5 +1,5 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DollarSign, TrendingUp, BarChart3, Calendar, Plus } from 'lucide-react';
@@ -28,56 +28,28 @@ import { Textarea } from '@/components/ui/textarea';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 
-// Mock sales data for 30 days
-const generateMockSalesData = () => {
-  const data = [];
-  const today = new Date();
-  
-  for (let i = 29; i >= 0; i--) {
-    const date = new Date(today);
-    date.setDate(today.getDate() - i);
-    
-    // More sales on weekends and random spikes
-    let amount = 0;
-    
-    if (date.getDay() === 0 || date.getDay() === 6) {
-      // Weekends have higher sales
-      amount = Math.floor(Math.random() * 40) + 20;
-    } else {
-      // Weekdays
-      amount = Math.floor(Math.random() * 25) + 5;
-    }
-    
-    // Add some spikes
-    if (Math.random() > 0.85) {
-      amount += Math.floor(Math.random() * 50) + 20;
-    }
-    
-    data.push({
-      date: date.toISOString().split('T')[0],
-      amount
-    });
-  }
-  
-  return data;
-};
+interface Sale {
+  _id: string;
+  student: string;
+  product: string;
+  customer: string;
+  amount: number;
+  date: string;
+  notes?: string;
+  status: 'pending' | 'completed' | 'cancelled';
+  createdAt: string;
+  updatedAt: string;
+}
 
-const generateMonthlySalesData = () => {
-  const months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-  ];
-  
-  return months.map(month => ({
-    date: month,
-    amount: Math.floor(Math.random() * 300) + 100
-  }));
-};
+interface FormData {
+  product: string;
+  amount: string;
+  customer: string;
+  notes: string;
+  customProduct: string;
+}
 
-// Mock data
-const mockDailySales = generateMockSalesData();
-const mockMonthlySales = generateMonthlySalesData();
-
+// Mock products for the add sale form
 const mockProducts = [
   { id: 1, name: 'Eco-friendly Notebook', price: 25 },
   { id: 2, name: 'Bamboo Pen Set', price: 18 },
@@ -87,86 +59,184 @@ const mockProducts = [
   { id: 6, name: 'Eco-friendly Water Bottle', price: 20 },
 ];
 
-const salesTransactions = [
-  { id: 1, customer: 'John Smith', product: 'Eco-friendly Notebook', amount: 25, date: '2023-10-15' },
-  { id: 2, customer: 'Emily Johnson', product: 'Bamboo Pen Set', amount: 18, date: '2023-10-14' },
-  { id: 3, customer: 'Michael Lee', product: 'Recycled Paper Journal', amount: 22, date: '2023-10-12' },
-  { id: 4, customer: 'Sophia Garcia', product: 'Eco-friendly Notebook', amount: 25, date: '2023-10-10' },
-  { id: 5, customer: 'David Wilson', product: 'Sustainable Pencil Case', amount: 15, date: '2023-10-08' },
-  { id: 6, customer: 'Emma Rodriguez', product: 'Bamboo Pen Set', amount: 18, date: '2023-10-05' },
-  { id: 7, customer: 'James Brown', product: 'Recycled Paper Journal', amount: 22, date: '2023-10-03' },
-  { id: 8, customer: 'Olivia Martinez', product: 'Sustainable Pencil Case', amount: 15, date: '2023-10-01' },
-];
-
 const Sales = () => {
   const [period, setPeriod] = useState('daily');
-  const [transactions, setTransactions] = useState(salesTransactions);
-  const totalEarnings = transactions.reduce((sum, transaction) => sum + transaction.amount, 0);
+  const [sales, setSales] = useState<Sale[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isAddSaleOpen, setIsAddSaleOpen] = useState(false);
   const { toast } = useToast();
   
   // Form state for new sale
-  const [newSale, setNewSale] = useState({
-    customer: '',
+  const [formData, setFormData] = useState<FormData>({
     product: '',
-    customProduct: '',
     amount: '',
-    notes: ''
+    customer: '',
+    notes: '',
+    customProduct: ''
   });
+
+  useEffect(() => {
+    const fetchSales = async () => {
+      try {
+        setLoading(true);
+        const token = localStorage.getItem('token');
+        const response = await axios.get('http://localhost:5000/api/sales/my-sales', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setSales(response.data);
+        setError(null);
+      } catch (err: any) {
+        console.error('Error fetching sales:', err);
+        setError(err.response?.data?.error || 'Failed to fetch sales data');
+        toast({
+          title: "Error",
+          description: "Failed to fetch sales data",
+          variant: "destructive"
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSales();
+  }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setNewSale(prev => ({ ...prev, [name]: value }));
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSelectChange = (name: string) => (value: string) => {
-    setNewSale(prev => ({ ...prev, [name]: value }));
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleAddSale = () => {
-    if (!newSale.customer || (!newSale.product && !newSale.customProduct) || !newSale.amount) {
+  const handleAddSale = async () => {
+    try {
+      if (!formData.customer || !formData.product || !formData.amount) {
+        toast({
+          title: "Missing information",
+          description: "Please fill in all required fields",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const product = formData.product === 'custom' ? formData.customProduct : formData.product;
+      const amount = parseFloat(formData.amount);
+      
+      if (isNaN(amount) || amount <= 0) {
+        toast({
+          title: "Invalid amount",
+          description: "Please enter a valid amount",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const token = localStorage.getItem('token');
+      const response = await axios.post('http://localhost:5000/api/sales', {
+        product,
+        amount,
+        customer: formData.customer,
+        notes: formData.notes
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      setSales(prevSales => [response.data, ...prevSales]);
+      setFormData({
+        product: '',
+        amount: '',
+        customer: '',
+        notes: '',
+        customProduct: ''
+      });
+
       toast({
-        title: "Missing information",
-        description: "Please fill in all required fields",
+        title: "Sale recorded",
+        description: `$${amount} sale to ${formData.customer} has been recorded`
+      });
+    } catch (err) {
+      console.error('Error adding sale:', err);
+      toast({
+        title: "Error",
+        description: "Failed to record sale",
         variant: "destructive"
       });
-      return;
     }
+  };
 
-    const product = newSale.product === 'custom' ? newSale.customProduct : newSale.product;
-    const amount = parseFloat(newSale.amount);
+  if (loading) {
+    return <div>Loading sales data...</div>;
+  }
+
+  if (error) {
+    return <div>Error: {error}</div>;
+  }
+
+  const totalEarnings = sales.reduce((sum, sale) => sum + sale.amount, 0);
+  const averageSale = sales.length > 0 ? totalEarnings / sales.length : 0;
+
+  // Process sales data for charts
+  const processSalesData = () => {
+    // Group sales by date for the last 30 days
+    const dailySales = [];
+    const today = new Date();
     
-    if (isNaN(amount) || amount <= 0) {
-      toast({
-        title: "Invalid amount",
-        description: "Please enter a valid amount",
-        variant: "destructive"
+    for (let i = 29; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(today.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+      
+      // Find sales for this date
+      const daySales = sales.filter(sale => {
+        const saleDate = new Date(sale.date).toISOString().split('T')[0];
+        return saleDate === dateStr;
       });
-      return;
+      
+      // Calculate total amount for this day
+      const amount = daySales.reduce((total, sale) => total + sale.amount, 0);
+      
+      dailySales.push({
+        date: dateStr,
+        amount
+      });
     }
-
-    const newTransaction = {
-      id: Math.max(...transactions.map(t => t.id), 0) + 1,
-      customer: newSale.customer,
-      product,
-      amount,
-      date: new Date().toISOString().split('T')[0]
+    
+    // Group sales by month
+    const monthlySales = [];
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+    
+    // Get current year
+    const currentYear = new Date().getFullYear();
+    
+    // For each month, calculate total sales
+    for (let i = 0; i < 12; i++) {
+      const monthSales = sales.filter(sale => {
+        const saleDate = new Date(sale.date);
+        return saleDate.getMonth() === i && saleDate.getFullYear() === currentYear;
+      });
+      
+      const amount = monthSales.reduce((total, sale) => total + sale.amount, 0);
+      
+      monthlySales.push({
+        date: months[i],
+        amount
+      });
+    }
+    
+    return {
+      dailySales,
+      monthlySales
     };
-
-    setTransactions([newTransaction, ...transactions]);
-    setNewSale({
-      customer: '',
-      product: '',
-      customProduct: '',
-      amount: '',
-      notes: ''
-    });
-
-    toast({
-      title: "Sale recorded",
-      description: `$${amount} sale to ${newSale.customer} has been recorded`
-    });
   };
-  
+
+  const { dailySales, monthlySales } = processSalesData();
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -203,7 +273,7 @@ const Sales = () => {
                   <Input
                     id="customer"
                     name="customer"
-                    value={newSale.customer}
+                    value={formData.customer}
                     onChange={handleInputChange}
                     placeholder="e.g. John Smith"
                   />
@@ -212,7 +282,7 @@ const Sales = () => {
                 <div className="grid gap-2">
                   <Label htmlFor="product">Product</Label>
                   <Select 
-                    value={newSale.product}
+                    value={formData.product}
                     onValueChange={handleSelectChange('product')}
                   >
                     <SelectTrigger id="product">
@@ -232,13 +302,13 @@ const Sales = () => {
                   </Select>
                 </div>
                 
-                {newSale.product === 'custom' && (
+                {formData.product === 'custom' && (
                   <div className="grid gap-2">
                     <Label htmlFor="customProduct">Custom Product Name</Label>
                     <Input
                       id="customProduct"
                       name="customProduct"
-                      value={newSale.customProduct}
+                      value={formData.customProduct}
                       onChange={handleInputChange}
                       placeholder="e.g. Handmade Craft"
                     />
@@ -251,7 +321,7 @@ const Sales = () => {
                     id="amount"
                     name="amount"
                     type="number"
-                    value={newSale.amount}
+                    value={formData.amount}
                     onChange={handleInputChange}
                     placeholder="0.00"
                     min="0.01"
@@ -264,7 +334,7 @@ const Sales = () => {
                   <Textarea
                     id="notes"
                     name="notes"
-                    value={newSale.notes}
+                    value={formData.notes}
                     onChange={handleInputChange}
                     placeholder="Additional details about the sale..."
                     rows={3}
@@ -304,7 +374,7 @@ const Sales = () => {
           <CardContent>
             <div className="flex items-center gap-2">
               <TrendingUp className="h-5 w-5 text-primary" />
-              <div className="text-2xl font-bold">{transactions.length}</div>
+              <div className="text-2xl font-bold">{sales.length}</div>
             </div>
           </CardContent>
         </Card>
@@ -316,9 +386,7 @@ const Sales = () => {
           <CardContent>
             <div className="flex items-center gap-2">
               <BarChart3 className="h-5 w-5 text-accent" />
-              <div className="text-2xl font-bold">
-                ${(totalEarnings / transactions.length).toFixed(2)}
-              </div>
+              <div className="text-2xl font-bold">${averageSale.toFixed(2)}</div>
             </div>
           </CardContent>
         </Card>
@@ -326,7 +394,7 @@ const Sales = () => {
       
       {/* Sales Chart */}
       <SalesChart 
-        data={period === 'daily' ? mockDailySales : mockMonthlySales} 
+        data={period === 'daily' ? dailySales : monthlySales} 
         title={`${period === 'daily' ? 'Daily' : 'Monthly'} Sales History`}
         description={`Your ${period} sales performance over time`}
       />
@@ -346,7 +414,6 @@ const Sales = () => {
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[500px]">
-              {/* Same content as above dialog */}
               <DialogHeader>
                 <DialogTitle>Record New Sale</DialogTitle>
                 <DialogDescription>
@@ -360,7 +427,7 @@ const Sales = () => {
                   <Input
                     id="customer-alt"
                     name="customer"
-                    value={newSale.customer}
+                    value={formData.customer}
                     onChange={handleInputChange}
                     placeholder="e.g. John Smith"
                   />
@@ -369,7 +436,7 @@ const Sales = () => {
                 <div className="grid gap-2">
                   <Label htmlFor="product-alt">Product</Label>
                   <Select 
-                    value={newSale.product}
+                    value={formData.product}
                     onValueChange={handleSelectChange('product')}
                   >
                     <SelectTrigger id="product-alt">
@@ -389,13 +456,13 @@ const Sales = () => {
                   </Select>
                 </div>
                 
-                {newSale.product === 'custom' && (
+                {formData.product === 'custom' && (
                   <div className="grid gap-2">
                     <Label htmlFor="customProduct-alt">Custom Product Name</Label>
                     <Input
                       id="customProduct-alt"
                       name="customProduct"
-                      value={newSale.customProduct}
+                      value={formData.customProduct}
                       onChange={handleInputChange}
                       placeholder="e.g. Handmade Craft"
                     />
@@ -408,7 +475,7 @@ const Sales = () => {
                     id="amount-alt"
                     name="amount"
                     type="number"
-                    value={newSale.amount}
+                    value={formData.amount}
                     onChange={handleInputChange}
                     placeholder="0.00"
                     min="0.01"
@@ -421,7 +488,7 @@ const Sales = () => {
                   <Textarea
                     id="notes-alt"
                     name="notes"
-                    value={newSale.notes}
+                    value={formData.notes}
                     onChange={handleInputChange}
                     placeholder="Additional details about the sale..."
                     rows={3}
@@ -449,23 +516,23 @@ const Sales = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {transactions.map((transaction) => (
-                <TableRow key={transaction.id}>
-                  <TableCell>{transaction.customer}</TableCell>
-                  <TableCell>{transaction.product}</TableCell>
+              {sales.map((sale) => (
+                <TableRow key={sale._id}>
+                  <TableCell>{sale.customer}</TableCell>
+                  <TableCell>{sale.product}</TableCell>
                   <TableCell>
-                    {new Date(transaction.date).toLocaleDateString('en-US', {
+                    {new Date(sale.date).toLocaleDateString('en-US', {
                       month: 'short',
                       day: 'numeric',
                       year: 'numeric'
                     })}
                   </TableCell>
-                  <TableCell className="text-right font-medium">${transaction.amount}</TableCell>
+                  <TableCell className="text-right font-medium">${sale.amount}</TableCell>
                 </TableRow>
               ))}
-              {transactions.length === 0 && (
+              {sales.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">No transactions recorded yet.</TableCell>
+                  <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">No sales recorded yet.</TableCell>
                 </TableRow>
               )}
             </TableBody>
@@ -487,7 +554,6 @@ const Sales = () => {
           </Button>
         </DialogTrigger>
         <DialogContent className="sm:max-w-[500px]">
-          {/* Same content as above dialog */}
           <DialogHeader>
             <DialogTitle>Record New Sale</DialogTitle>
             <DialogDescription>
@@ -501,7 +567,7 @@ const Sales = () => {
               <Input
                 id="customer-fixed"
                 name="customer"
-                value={newSale.customer}
+                value={formData.customer}
                 onChange={handleInputChange}
                 placeholder="e.g. John Smith"
               />
@@ -510,7 +576,7 @@ const Sales = () => {
             <div className="grid gap-2">
               <Label htmlFor="product-fixed">Product</Label>
               <Select 
-                value={newSale.product}
+                value={formData.product}
                 onValueChange={handleSelectChange('product')}
               >
                 <SelectTrigger id="product-fixed">
@@ -530,13 +596,13 @@ const Sales = () => {
               </Select>
             </div>
             
-            {newSale.product === 'custom' && (
+            {formData.product === 'custom' && (
               <div className="grid gap-2">
                 <Label htmlFor="customProduct-fixed">Custom Product Name</Label>
                 <Input
                   id="customProduct-fixed"
                   name="customProduct"
-                  value={newSale.customProduct}
+                  value={formData.customProduct}
                   onChange={handleInputChange}
                   placeholder="e.g. Handmade Craft"
                 />
@@ -549,7 +615,7 @@ const Sales = () => {
                 id="amount-fixed"
                 name="amount"
                 type="number"
-                value={newSale.amount}
+                value={formData.amount}
                 onChange={handleInputChange}
                 placeholder="0.00"
                 min="0.01"
@@ -562,7 +628,7 @@ const Sales = () => {
               <Textarea
                 id="notes-fixed"
                 name="notes"
-                value={newSale.notes}
+                value={formData.notes}
                 onChange={handleInputChange}
                 placeholder="Additional details about the sale..."
                 rows={3}

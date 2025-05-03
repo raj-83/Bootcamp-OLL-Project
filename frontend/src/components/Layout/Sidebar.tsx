@@ -1,6 +1,5 @@
-
-import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { 
   Home, 
@@ -23,7 +22,8 @@ import {
   Layers,
   UserCog,
   GraduationCap,
-  MessageSquare
+  MessageSquare,
+  LogOut
 } from 'lucide-react';
 
 const roleBasedNavItems = {
@@ -37,7 +37,7 @@ const roleBasedNavItems = {
     { to: '/student/help', icon: <UserCog size={18} />, label: 'Help & Support' },
     { to: '/student/profile', icon: <User size={18} />, label: 'My Profile' },
   ],
-  mentor: [
+  teacher: [
     { to: '/mentor/dashboard', icon: <Home size={18} />, label: 'Dashboard' },
     { to: '/mentor/batches', icon: <Briefcase size={18} />, label: 'Batches' },
     { to: '/mentor/sessions', icon: <Video size={18} />, label: 'Sessions' },
@@ -58,13 +58,70 @@ const roleBasedNavItems = {
 
 const Sidebar = () => {
   const location = useLocation();
-  // For demo purposes, we'll use a state to toggle between roles
-  // In a real app, this would come from auth context
-  const [role, setRole] = React.useState<'student' | 'mentor' | 'admin'>('student');
+  const navigate = useNavigate();
+  const [userInfo, setUserInfo] = useState<{ name: string; role: string } | null>(null);
+  const [userInitials, setUserInitials] = useState('');
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   
-  const handleRoleChange = (newRole: 'student' | 'mentor' | 'admin') => {
-    setRole(newRole);
+  const handleLogout = () => {
+    // Clear user data from localStorage
+    localStorage.removeItem('user');
+    // Redirect to login page
+    navigate('/login');
   };
+  
+  const openLogoutModal = () => {
+    setShowLogoutModal(true);
+  };
+  
+  const closeLogoutModal = () => {
+    setShowLogoutModal(false);
+  };
+  
+  useEffect(() => {
+    // Get user info from localStorage
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        setUserInfo({
+          name: parsedUser.name || '',
+          role: parsedUser.role?.toLowerCase() || 'student' // Default to student if role is missing
+        });
+        
+        // Generate initials from user name
+        if (parsedUser.name) {
+          const names = parsedUser.name.split(' ');
+          const initials = names.length > 1 
+            ? `${names[0][0]}${names[1][0]}` 
+            : names[0].substring(0, 2);
+          setUserInitials(initials.toUpperCase());
+        }
+      } catch (error) {
+        console.error('Error parsing user data from localStorage:', error);
+        setUserInfo({ name: 'User', role: 'student' });
+        setUserInitials('U');
+      }
+    }
+  }, []);
+
+  // Determine which navigation items to show based on user role
+  const getUserNavItems = () => {
+    if (!userInfo?.role) return [];
+    
+    const role = userInfo.role.toLowerCase();
+    
+    // Map role to the appropriate navigation items
+    if (role === 'admin') {
+      return roleBasedNavItems.admin;
+    } else if (role === 'teacher') {
+      return roleBasedNavItems.teacher;
+    } else {
+      return roleBasedNavItems.student; // Default to student
+    }
+  };
+  
+  const navItems = getUserNavItems();
 
   return (
     <div className="h-full w-72 bg-sidebar text-sidebar-foreground flex flex-col">
@@ -74,36 +131,10 @@ const Sidebar = () => {
         <h1 className="text-xl font-bold">Bootcamp Portal</h1>
       </div>
 
-      {/* Role selector - just for demo */}
-      <div className="px-4 mb-6">
-        <div className="bg-sidebar-accent rounded-md p-2">
-          <div className="text-sidebar-accent-foreground text-sm font-medium mb-2 flex items-center gap-1">
-            <User size={14} />
-            <span>Switch Role</span>
-          </div>
-          <div className="flex gap-1">
-            {(['student', 'mentor', 'admin'] as const).map((r) => (
-              <button
-                key={r}
-                onClick={() => handleRoleChange(r)}
-                className={cn(
-                  "flex-1 py-1.5 px-2 text-xs font-medium rounded-md capitalize transition-colors",
-                  role === r 
-                    ? "bg-sidebar-primary text-sidebar-primary-foreground" 
-                    : "bg-transparent text-sidebar-accent-foreground hover:bg-sidebar-primary/10"
-                )}
-              >
-                {r}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
       {/* Navigation */}
       <div className="px-3 flex-1 overflow-y-auto">
         <nav className="space-y-1">
-          {roleBasedNavItems[role].map((item) => (
+          {navItems.map((item) => (
             <Link
               key={item.to}
               to={item.to}
@@ -123,15 +154,47 @@ const Sidebar = () => {
       <div className="border-t border-sidebar-border/30 p-4 mt-auto">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-sidebar-accent flex items-center justify-center">
-            <span className="text-sidebar-accent-foreground font-medium">JD</span>
+            <span className="text-sidebar-accent-foreground font-medium">{userInitials}</span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate">John Doe</p>
-            <p className="text-xs opacity-70 truncate capitalize">{role}</p>
+            <p className="text-sm font-medium truncate">{userInfo?.name || 'User'}</p>
+            <p className="text-xs opacity-70 truncate capitalize">{userInfo?.role || 'user'}</p>
           </div>
-          <ChevronDown size={16} />
+          <button 
+            onClick={openLogoutModal}
+            className="text-sidebar-foreground/70 hover:text-sidebar-foreground transition-colors"
+            title="Logout"
+          >
+            <LogOut size={18} />
+          </button>
         </div>
       </div>
+      {showLogoutModal && (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full mx-4">
+          <h2 className="text-xl font-semibold mb-4 text-gray-800">Confirm Logout</h2>
+          <p className="text-gray-600 mb-6">Are you sure you want to logout from your account?</p>
+          
+          <div className="flex justify-end space-x-3">
+            <button 
+              onClick={closeLogoutModal}
+              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button 
+              onClick={() => {
+                handleLogout();
+                closeLogoutModal();
+              }}
+              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+            >
+              Logout
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
     </div>
   );
 };

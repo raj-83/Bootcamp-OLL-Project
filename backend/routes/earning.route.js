@@ -180,4 +180,105 @@ const getWeeklyData = async (salesData, commissionRate) => {
   }));
 };
 
+
+// Get earnings for a specific student
+router.get('/student/:studentId', async (req, res) => {
+  try {
+    const studentId = req.params.studentId;
+    
+    // Verify student exists
+    const student = await Student.findById(studentId);
+    if (!student) {
+      return res.status(404).json({ message: 'Student not found' });
+    }
+    
+    // Calculate total earnings from sales
+    const salesData = await Sales.find({ 
+      student: studentId,
+      status: 'completed'
+    });
+    
+    const totalEarnings = salesData.reduce((sum, sale) => sum + sale.amount, 0);
+    
+    // Update student's earning field
+    await Student.findByIdAndUpdate(studentId, { earning: totalEarnings });
+    
+    // Calculate earnings by month
+    const earningsByMonth = {};
+    salesData.forEach(sale => {
+      const date = new Date(sale.date);
+      const monthYear = `${date.getMonth() + 1}-${date.getFullYear()}`;
+      
+      if (!earningsByMonth[monthYear]) {
+        earningsByMonth[monthYear] = 0;
+      }
+      
+      earningsByMonth[monthYear] += sale.amount;
+    });
+    
+    // Return earnings data
+    res.json({
+      totalEarnings,
+      earningsByMonth,
+      recentSales: salesData.slice(0, 5)
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Get earnings for all students
+router.get('/', async (req, res) => {
+  try {
+    // Get all students
+    const students = await Student.find();
+    
+    // Calculate earnings for each student
+    const earningsData = await Promise.all(students.map(async (student) => {
+      const salesData = await Sales.find({ 
+        student: student._id,
+        status: 'completed'
+      });
+      
+      const totalEarnings = salesData.reduce((sum, sale) => sum + sale.amount, 0);
+      
+      return {
+        studentId: student._id,
+        name: student.name,
+        totalEarnings
+      };
+    }));
+    
+    res.json(earningsData);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Update student's task completion and attendance stats
+router.put('/stats/:studentId', async (req, res) => {
+  try {
+    const { taskCompletion, attendance } = req.body;
+    const studentId = req.params.studentId;
+    
+    const updateData = {};
+    if (taskCompletion !== undefined) updateData.taskCompletion = taskCompletion;
+    if (attendance !== undefined) updateData.attendance = attendance;
+    
+    const updatedStudent = await Student.findByIdAndUpdate(
+      studentId,
+      updateData,
+      { new: true }
+    );
+    
+    if (!updatedStudent) {
+      return res.status(404).json({ message: 'Student not found' });
+    }
+    
+    res.json(updatedStudent);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
 export default router;

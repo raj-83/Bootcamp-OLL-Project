@@ -3,9 +3,60 @@ import express from "express";
 import Session from "../models/session.model.js";
 import Batch from "../models/batch.model.js";
 import Teacher from "../models/teacher.model.js";
+import Student from "../models/student.model.js";
 import { protect, authorize } from '../middleware/auth.middleware.js';
 
 const router = express.Router();
+
+// Get sessions for a specific student - MUST BE BEFORE THE /:id ROUTE
+router.get("/student", protect, async (req, res) => {
+  try {
+    // Get student ID from authenticated user 
+    const studentId = req.user._id;
+    
+    // Find student to get their batches
+    const student = await Student.findById(studentId);
+    if (!student) {
+      return res.status(404).json({ error: "Student not found" });
+    }
+
+    // Get all batches for this student
+    const studentBatches = student.batches || [];
+    
+    // Find all sessions that belong to these batches
+    const sessions = await Session.find({ batch: { $in: studentBatches } })
+      .populate('batch', 'batchName')
+      .sort({ date: 1 });
+
+    // Format response with additional info
+    const formattedSessions = sessions.map(session => {
+      const sessionObject = session.toObject();
+      
+      // Add derived status (upcoming or completed)
+      const sessionDate = new Date(session.date);
+      const today = new Date();
+      sessionObject.status = sessionDate >= today ? 'upcoming' : 'completed';
+      
+      // Add batch name
+      sessionObject.batchName = session.batch?.batchName || 'Unknown Batch';
+      
+      return {
+        id: sessionObject._id,
+        title: sessionObject.title,
+        date: sessionObject.date,
+        time: sessionObject.time,
+        status: sessionObject.status,
+        batchName: sessionObject.batchName,
+        notes: sessionObject.notes
+      };
+    });
+
+    res.status(200).json(formattedSessions);
+  } catch (error) {
+    console.error("Failed to fetch student sessions:", error);
+    res.status(500).json({ error: "Failed to fetch student sessions" });
+  }
+});
 
 // Create a new session
 router.post("/", async (req, res) => {
@@ -97,6 +148,44 @@ router.get("/teacher", protect, async (req, res) => {
   } catch (error) {
     console.error("Failed to fetch teacher sessions:", error);
     res.status(500).json({ error: "Failed to fetch teacher sessions" });
+  }
+});
+
+
+// Get upcoming sessions for a specific student
+router.get('/upcoming/student/:studentId', async (req, res) => {
+  try {
+    const studentId = req.params.studentId;
+    
+    // Find student to get their batches
+    const student = await Student.findById(studentId);
+    if (!student) {
+      return res.status(404).json({ message: 'Student not found' });
+    }
+    
+    // Get current date
+    const currentDate = new Date();
+    
+    // Find upcoming sessions for the student's batches
+    const sessions = await Session.find({
+      batch: { $in: student.batches },
+      date: { $gte: currentDate }
+    }).sort({ date: 1 }).limit(1);
+    
+    // Add meetingLink field based on the batch
+    const sessionsWithLink = await Promise.all(sessions.map(async (session) => {
+      const batch = await Batch.findById(session.batch);
+      const sessionObj = session.toObject();
+      
+      // Add a mock meeting link - in a real application this would come from your database
+      sessionObj.meetingLink = `https://zoom.us/j/${batch._id}`;
+      
+      return sessionObj;
+    }));
+    
+    res.json(sessionsWithLink);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 });
 

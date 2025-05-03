@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   User, 
   Mail, 
@@ -22,48 +21,79 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
+import { useAuth } from '@/context/AuthContext';
 
-// Mock data
-const initialProfileData = {
-  name: 'Alex Johnson',
-  role: 'Student',
-  email: 'alex.johnson@example.com',
-  phone: '(555) 123-4567',
-  location: 'San Francisco, CA',
-  school: 'Lincoln High School',
-  grade: '10th Grade',
-  joined: 'June 2023',
-  badges: [
-    { id: 1, name: 'First Sale', description: 'Made first product sale', icon: <ShoppingBag size={16} /> },
-    { id: 2, name: 'School Creator', description: 'Created a business plan', icon: <Rocket size={16} /> },
-    { id: 3, name: 'Early Bird', description: 'Joined in the first week', icon: <Clock size={16} /> },
-    { id: 4, name: 'Rising Star', description: 'Top 10 in leaderboard', icon: <Trophy size={16} /> },
-  ],
-  stats: {
-    sales: 17,
-    earnings: 325,
-    points: 780,
-    rank: 7,
-    nationalRank: 245
-  },
-  recentActivities: [
-    { id: 1, action: 'Made a sale', details: 'Eco-friendly notebook for $25', date: '2 days ago' },
-    { id: 2, action: 'Updated business plan', details: 'Added new product line', date: '1 week ago' },
-    { id: 3, action: 'Earned badge', details: 'Rising Star badge for reaching top 10', date: '2 weeks ago' },
-  ]
-};
+interface StudentProfile {
+  _id: string;
+  name: string;
+  role: string;
+  email: string;
+  phone: string;
+  location: string;
+  school: string;
+  grade: string;
+  joined: string;
+  status: string;
+  earning: number;
+  attendance: number;
+  taskCompletion: number;
+  batches: any[];
+  teachers: any[];
+}
 
 const Profile = () => {
-  const [profileData, setProfileData] = useState(initialProfileData);
+  const { user } = useAuth();
+  const [profileData, setProfileData] = useState<StudentProfile | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editedProfile, setEditedProfile] = useState({
-    name: profileData.name,
-    email: profileData.email,
-    phone: profileData.phone,
-    location: profileData.location,
-    school: profileData.school,
-    grade: profileData.grade
+    name: '',
+    email: '',
+    phone: '',
+    location: '',
+    school: '',
+    grade: ''
   });
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStudentProfile = async () => {
+      try {
+        const response = await fetch(`http://localhost:5000/api/students/${user?._id}`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch student profile');
+        }
+        
+        const data = await response.json();
+        setProfileData(data);
+        setEditedProfile({
+          name: data.name,
+          email: data.email,
+          phone: data.phone,
+          location: data.location,
+          school: data.school,
+          grade: data.grade
+        });
+      } catch (error) {
+        console.error('Error fetching student profile:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load profile data",
+          variant: "destructive"
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (user?._id) {
+      fetchStudentProfile();
+    }
+  }, [user]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -73,254 +103,208 @@ const Profile = () => {
     }));
   };
 
-  const handleSaveProfile = () => {
-    // Update the profile data
-    setProfileData(prev => ({
-      ...prev,
-      name: editedProfile.name,
-      email: editedProfile.email,
-      phone: editedProfile.phone,
-      location: editedProfile.location,
-      school: editedProfile.school,
-      grade: editedProfile.grade
-    }));
-    
-    setIsEditModalOpen(false);
-    
-    toast({
-      title: "Profile updated",
-      description: "Your profile has been successfully updated.",
-    });
+  const handleSaveProfile = async () => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/students/${user?._id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify(editedProfile)
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update profile');
+      }
+
+      const updatedData = await response.json();
+      setProfileData(updatedData.student);
+      
+      setIsEditModalOpen(false);
+      
+      toast({
+        title: "Profile updated",
+        description: "Your profile has been successfully updated.",
+      });
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update profile",
+        variant: "destructive"
+      });
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+      </div>
+    );
+  }
+
+  if (!profileData) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p className="text-lg text-gray-600">No profile data available</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">My Profile</h1>
         <Button variant="outline" size="sm" onClick={() => setIsEditModalOpen(true)}>
-          <Edit size={16} className="mr-2" />
+          <Edit className="w-4 h-4 mr-2" />
           Edit Profile
         </Button>
       </div>
 
-      {/* Profile Overview */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Profile Info Card */}
-        <Card className="lg:col-span-1 animate-fade-in">
-          <CardContent className="p-6">
-            <div className="flex flex-col items-center text-center">
-              <div className="w-24 h-24 rounded-full bg-primary/10 text-primary flex items-center justify-center text-2xl font-bold mb-4">
-                {profileData.name.split(' ').map(n => n[0]).join('')}
-              </div>
-              
-              <h2 className="text-xl font-bold">{profileData.name}</h2>
-              <p className="text-muted-foreground mb-6">{profileData.role}</p>
-              
-              <div className="w-full space-y-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                    <Mail size={14} />
-                  </div>
-                  <div className="text-left">
-                    <p className="text-xs text-muted-foreground">Email</p>
-                    <p className="text-sm font-medium">{profileData.email}</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                    <Phone size={14} />
-                  </div>
-                  <div className="text-left">
-                    <p className="text-xs text-muted-foreground">Phone</p>
-                    <p className="text-sm font-medium">{profileData.phone}</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                    <MapPin size={14} />
-                  </div>
-                  <div className="text-left">
-                    <p className="text-xs text-muted-foreground">Location</p>
-                    <p className="text-sm font-medium">{profileData.location}</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                    <School size={14} />
-                  </div>
-                  <div className="text-left">
-                    <p className="text-xs text-muted-foreground">School</p>
-                    <p className="text-sm font-medium">{profileData.school}</p>
-                  </div>
-                </div>
-              </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Personal Information</CardTitle>
+            <CardDescription>Your basic profile details</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <User className="w-4 h-4 text-gray-500" />
+              <span className="font-medium">Name:</span>
+              <span>{profileData.name}</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Mail className="w-4 h-4 text-gray-500" />
+              <span className="font-medium">Email:</span>
+              <span>{profileData.email}</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Phone className="w-4 h-4 text-gray-500" />
+              <span className="font-medium">Phone:</span>
+              <span>{profileData.phone}</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <MapPin className="w-4 h-4 text-gray-500" />
+              <span className="font-medium">Location:</span>
+              <span>{profileData.location}</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <School className="w-4 h-4 text-gray-500" />
+              <span className="font-medium">School:</span>
+              <span>{profileData.school}</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="font-medium">Grade:</span>
+              <span>{profileData.grade}</span>
             </div>
           </CardContent>
         </Card>
-        
-        {/* Stats & Leaderboard */}
-        <Card className="lg:col-span-2 animate-fade-in" style={{animationDelay: '0.1s'}}>
+
+        <Card>
           <CardHeader>
-            <CardTitle>Performance Overview</CardTitle>
+            <CardTitle>Performance Metrics</CardTitle>
             <CardDescription>Your progress and achievements</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Sales</p>
-                <p className="text-2xl font-bold">{profileData.stats.sales}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Earnings</p>
-                <p className="text-2xl font-bold">${profileData.stats.earnings}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Batch Rank</p>
-                <p className="text-2xl font-bold">#{profileData.stats.rank}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">National Rank</p>
-                <p className="text-2xl font-bold">#{profileData.stats.nationalRank}</p>
-              </div>
+          <CardContent className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <Trophy className="w-4 h-4 text-gray-500" />
+              <span className="font-medium">Earnings:</span>
+              <span>${profileData.earning}</span>
             </div>
-            
-            <div className="mt-6">
-              <h3 className="font-medium mb-3">Earned Badges</h3>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {profileData.badges.map(badge => (
-                  <div key={badge.id} className="border rounded-lg p-3 text-center hover:border-primary/50 transition-colors">
-                    <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto mb-2">
-                      {badge.icon}
-                    </div>
-                    <p className="font-medium text-sm">{badge.name}</p>
-                    <p className="text-xs text-muted-foreground">{badge.description}</p>
-                  </div>
-                ))}
-              </div>
+            <div className="flex items-center space-x-2">
+              <Clock className="w-4 h-4 text-gray-500" />
+              <span className="font-medium">Attendance:</span>
+              <span>{profileData.attendance}%</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Check className="w-4 h-4 text-gray-500" />
+              <span className="font-medium">Task Completion:</span>
+              <span>{profileData.taskCompletion}%</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="font-medium">Status:</span>
+              <span className={`px-2 py-1 rounded-full text-xs ${
+                profileData.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+              }`}>
+                {profileData.status}
+              </span>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Recent Activity */}
-      <Card className="animate-fade-in" style={{animationDelay: '0.2s'}}>
-        <CardHeader>
-          <CardTitle>Recent Activity</CardTitle>
-          <CardDescription>Latest actions and achievements</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {profileData.recentActivities.map(activity => (
-              <div 
-                key={activity.id}
-                className="flex items-start gap-3 p-3 rounded-lg border"
-              >
-                <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                  <Check size={14} />
-                </div>
-                <div className="flex-1">
-                  <p className="font-medium">{activity.action}</p>
-                  <p className="text-sm text-muted-foreground">{activity.details}</p>
-                </div>
-                <div className="text-xs text-muted-foreground">{activity.date}</div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Edit Profile Modal */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit Profile</DialogTitle>
             <DialogDescription>
               Update your profile information
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="name" className="text-right">
-                Name
-              </Label>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Name</Label>
               <Input
                 id="name"
                 name="name"
                 value={editedProfile.name}
                 onChange={handleInputChange}
-                className="col-span-3"
               />
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="email" className="text-right">
-                Email
-              </Label>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 name="email"
+                type="email"
                 value={editedProfile.email}
                 onChange={handleInputChange}
-                className="col-span-3"
               />
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="phone" className="text-right">
-                Phone
-              </Label>
+            <div className="space-y-2">
+              <Label htmlFor="phone">Phone</Label>
               <Input
                 id="phone"
                 name="phone"
                 value={editedProfile.phone}
                 onChange={handleInputChange}
-                className="col-span-3"
               />
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="location" className="text-right">
-                Location
-              </Label>
+            <div className="space-y-2">
+              <Label htmlFor="location">Location</Label>
               <Input
                 id="location"
                 name="location"
                 value={editedProfile.location}
                 onChange={handleInputChange}
-                className="col-span-3"
               />
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="school" className="text-right">
-                School Name
-              </Label>
+            <div className="space-y-2">
+              <Label htmlFor="school">School</Label>
               <Input
                 id="school"
                 name="school"
                 value={editedProfile.school}
                 onChange={handleInputChange}
-                className="col-span-3"
               />
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="grade" className="text-right">
-                Grade
-              </Label>
+            <div className="space-y-2">
+              <Label htmlFor="grade">Grade</Label>
               <Input
                 id="grade"
                 name="grade"
                 value={editedProfile.grade}
                 onChange={handleInputChange}
-                className="col-span-3"
               />
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)}>
+            <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
               Cancel
             </Button>
-            <Button type="button" onClick={handleSaveProfile}>
-              <Save className="h-4 w-4 mr-2" />
+            <Button onClick={handleSaveProfile}>
               Save Changes
             </Button>
           </DialogFooter>

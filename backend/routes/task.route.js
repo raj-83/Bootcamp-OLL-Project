@@ -5,6 +5,39 @@ import Batch from '../models/batch.model.js';
 
 const router = express.Router();
 
+
+// Get all tasks
+router.get('/tasks', async (req, res) => {
+    try {
+      const tasks = await Task.find().sort({ dueDate: 1 });
+      res.json(tasks);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Get tasks for a specific student
+  router.get('/tasks/student/:studentId', async (req, res) => {
+    try {
+      const studentId = req.params.studentId;
+      
+      // Find student to get their batches
+      const student = await Student.findById(studentId);
+      if (!student) {
+        return res.status(404).json({ message: 'Student not found' });
+      }
+      
+      // Find all tasks for the student's batches
+      const tasks = await Task.find({
+        batch: { $in: student.batches }
+      }).sort({ dueDate: 1 });
+      
+      res.json(tasks);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
 // Create a new task
 router.post('/tasks', async (req, res) => {
     try {

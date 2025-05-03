@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -7,81 +6,102 @@ import { Badge } from '@/components/ui/badge';
 import { Calendar, CheckCircle, Clock, Link as LinkIcon, Play, Video, XCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import axios from 'axios';
+import { useToast } from '@/components/ui/use-toast';
+import { useNavigate } from 'react-router-dom';
 
-// Mock data
-const mockSessions = [
-  { 
-    id: 1, 
-    title: "Business Idea Brainstorming", 
-    date: new Date(2023, 5, 15, 15, 0), // June 15, 2023, 3:00 PM 
-    status: "completed", 
-    attended: true,
-    recordingUrl: "https://example.com/recordings/session1"
-  },
-  { 
-    id: 2, 
-    title: "Marketing Fundamentals", 
-    date: new Date(2023, 5, 22, 15, 0), // June 22, 2023, 3:00 PM
-    status: "completed", 
-    attended: true,
-    recordingUrl: "https://example.com/recordings/session2"
-  },
-  { 
-    id: 3, 
-    title: "Financial Planning", 
-    date: new Date(2023, 5, 29, 15, 0), // June 29, 2023, 3:00 PM
-    status: "completed", 
-    attended: false
-  },
-  { 
-    id: 4, 
-    title: "Product Development", 
-    date: new Date(2023, 6, 6, 15, 0), // July 6, 2023, 3:00 PM
-    status: "completed", 
-    attended: true,
-    recordingUrl: "https://example.com/recordings/session4"
-  },
-  { 
-    id: 5, 
-    title: "Customer Acquisition", 
-    date: new Date(2023, 6, 13, 15, 0), // July 13, 2023, 3:00 PM
-    status: "upcoming",
-    joinLink: "https://zoom.us/j/1234567890"
-  },
-  { 
-    id: 6, 
-    title: "Sales Techniques", 
-    date: new Date(2023, 6, 20, 15, 0), // July 20, 2023, 3:00 PM
-    status: "upcoming"
-  },
-  { 
-    id: 7, 
-    title: "Scaling Strategies", 
-    date: new Date(2023, 6, 27, 15, 0), // July 27, 2023, 3:00 PM
-    status: "rescheduled",
-    newDate: new Date(2023, 6, 29, 15, 0), // July 29, 2023, 3:00 PM
-    reason: "Mentor unavailable"
-  }
-];
-
-// Calculate attendance percentage
-const calculateAttendance = () => {
-  const completedSessions = mockSessions.filter(session => session.status === "completed");
-  const attended = completedSessions.filter(session => session.attended).length;
-  return (attended / completedSessions.length) * 100;
-};
+interface Session {
+  id: string;
+  title: string;
+  date: string;
+  time: string;
+  status: 'upcoming' | 'completed' | 'cancelled' | 'rescheduled';
+  batchName: string;
+  notes: string;
+}
 
 const StudentSessions = () => {
   const [activeTab, setActiveTab] = useState<string>("all");
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    fetchSessions();
+  }, []);
+
+  const fetchSessions = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      console.log("Token:", token ? "Token exists" : "No token found"); // Debug log
+      
+      if (!token) {
+        toast({
+          title: "Error",
+          description: "Please login to view sessions",
+          variant: "destructive"
+        });
+        navigate('/login');
+        return;
+      }
+
+      // Log the user ID from the token
+      try {
+        const tokenParts = token.split('.');
+        if (tokenParts.length === 3) {
+          const payload = JSON.parse(atob(tokenParts[1]));
+          console.log("Token payload:", payload); // Debug log
+        }
+      } catch (e) {
+        console.error("Error parsing token:", e);
+      }
+
+      const response = await axios.get('http://localhost:5000/api/sessions/student', {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      
+      console.log("API response:", response.data); // Debug log
+      setSessions(response.data);
+    } catch (error: any) {
+      console.error('Error fetching sessions:', error);
+      console.error('Error details:', error.response?.data); // Debug log
+      
+      if (error.response?.status === 401) {
+        toast({
+          title: "Error",
+          description: "Session expired. Please login again.",
+          variant: "destructive"
+        });
+        navigate('/login');
+      } else {
+        toast({
+          title: "Error",
+          description: `Failed to fetch sessions: ${error.response?.data?.error || error.message}`,
+          variant: "destructive"
+        });
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const calculateAttendance = () => {
+    const completedSessions = sessions.filter(session => session.status === "completed");
+    if (completedSessions.length === 0) return 0;
+    return 100; // Since we don't have attendance tracking yet
+  };
 
   const filteredSessions = () => {
     switch (activeTab) {
       case "upcoming":
-        return mockSessions.filter(session => ["upcoming", "rescheduled"].includes(session.status));
+        return sessions.filter(session => ["upcoming", "rescheduled"].includes(session.status));
       case "completed":
-        return mockSessions.filter(session => session.status === "completed");
+        return sessions.filter(session => session.status === "completed");
       default:
-        return mockSessions;
+        return sessions;
     }
   };
 
@@ -92,6 +112,10 @@ const StudentSessions = () => {
   const handleViewRecording = (recordingUrl: string) => {
     window.open(recordingUrl, "_blank");
   };
+
+  if (loading) {
+    return <div className="flex justify-center items-center h-64">Loading sessions...</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -121,84 +145,56 @@ const StudentSessions = () => {
             </TabsList>
             
             <TabsContent value={activeTab}>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date & Time</TableHead>
-                    <TableHead>Topic</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Attendance</TableHead>
-                    <TableHead className="text-right">Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredSessions().map(session => (
-                    <TableRow key={session.id}>
-                      <TableCell>
-                        <div className="font-medium">{format(session.date, 'MMM d, yyyy')}</div>
-                        <div className="text-sm text-muted-foreground">{format(session.date, 'h:mm a')}</div>
-                        
-                        {session.status === "rescheduled" && session.newDate && (
-                          <div className="text-xs text-warning mt-1 flex items-center gap-1">
-                            <Clock size={12} />
-                            <span>Rescheduled to {format(session.newDate, 'MMM d, h:mm a')}</span>
-                          </div>
-                        )}
-                      </TableCell>
-                      
-                      <TableCell>{session.title}</TableCell>
-                      
-                      <TableCell>
-                        {session.status === "completed" && (
-                          <Badge className="bg-success">Completed</Badge>
-                        )}
-                        {session.status === "upcoming" && (
-                          <Badge className="bg-primary">Upcoming</Badge>
-                        )}
-                        {session.status === "rescheduled" && (
-                          <Badge className="bg-warning text-warning-foreground">Rescheduled</Badge>
-                        )}
-                      </TableCell>
-                      
-                      <TableCell>
-                        {session.status === "completed" && (
-                          session.attended ? 
-                          <div className="flex items-center gap-1 text-success">
-                            <CheckCircle size={16} />
-                            <span>Present</span>
-                          </div> :
-                          <div className="flex items-center gap-1 text-destructive">
-                            <XCircle size={16} />
-                            <span>Absent</span>
-                          </div>
-                        )}
-                        {session.status !== "completed" && "-"}
-                      </TableCell>
-                      
-                      <TableCell className="text-right">
-                        {session.status === "upcoming" && session.joinLink && (
-                          <Button size="sm" onClick={() => handleJoinSession(session.joinLink!)}>
-                            <LinkIcon size={16} className="mr-1" />
-                            Join
-                          </Button>
-                        )}
-                        
-                        {session.status === "completed" && session.recordingUrl && (
-                          <Button size="sm" variant="outline" onClick={() => handleViewRecording(session.recordingUrl!)}>
-                            <Play size={16} className="mr-1" />
-                            Recording
-                          </Button>
-                        )}
-                        
-                        {((session.status === "completed" && !session.recordingUrl) || 
-                          (session.status === "upcoming" && !session.joinLink)) && (
-                          <span className="text-sm text-muted-foreground">N/A</span>
-                        )}
-                      </TableCell>
+              {sessions.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  No sessions found. You may not be enrolled in any batches yet.
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date & Time</TableHead>
+                      <TableHead>Topic</TableHead>
+                      <TableHead>Batch</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Notes</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredSessions().map(session => (
+                      <TableRow key={session.id}>
+                        <TableCell>
+                          <div className="font-medium">{format(new Date(session.date), 'MMM d, yyyy')}</div>
+                          <div className="text-sm text-muted-foreground">{session.time}</div>
+                        </TableCell>
+                        
+                        <TableCell>{session.title}</TableCell>
+                        
+                        <TableCell>{session.batchName}</TableCell>
+                        
+                        <TableCell>
+                          {session.status === "completed" && (
+                            <Badge className="bg-success">Completed</Badge>
+                          )}
+                          {session.status === "upcoming" && (
+                            <Badge className="bg-primary">Upcoming</Badge>
+                          )}
+                          {session.status === "rescheduled" && (
+                            <Badge className="bg-warning text-warning-foreground">Rescheduled</Badge>
+                          )}
+                          {session.status === "cancelled" && (
+                            <Badge variant="destructive">Cancelled</Badge>
+                          )}
+                        </TableCell>
+                        
+                        <TableCell>
+                          <div className="text-sm text-muted-foreground">{session.notes}</div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </TabsContent>
           </Tabs>
         </CardContent>
