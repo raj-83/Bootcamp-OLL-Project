@@ -607,7 +607,7 @@ const AdminBatches = () => {
 
       {/* Add Batch Dialog - Updated to use teacher ID */}
       <Dialog open={showAddBatchDialog} onOpenChange={setShowAddBatchDialog}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add New Batch</DialogTitle>
             <DialogDescription>
