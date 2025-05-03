@@ -15,6 +15,7 @@ import taskRoutes from "./routes/task.route.js";
 import earningsRoutes from "./routes/earning.route.js"; 
 import adminEarningsRoutes from "./routes/admin-earning.route.js";
 import salesRoutes from "./routes/sales.route.js"; // Import sales routes
+import feedbackRoutes from "./routes/feedback.route.js"
 
 dotenv.config();
 const app = express();
@@ -50,6 +51,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api', taskRoutes);
 app.use('/api/earnings', earningsRoutes);
 app.use('/api/sales', salesRoutes);
+// app.use('/api/feedback', feedbackRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));

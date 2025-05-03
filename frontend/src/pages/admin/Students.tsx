@@ -109,7 +109,7 @@ const AdminStudents = () => {
       name: '',
       email: '',
       phone: '',
-      batches: [], // Changed from batch to batches to match schema
+      batch: '', // Changed from batch to batches to match schema
       age: '',
       school: ''
     }
@@ -162,7 +162,7 @@ const AdminStudents = () => {
       const batchId = batchNameToIdMap[data.batches];
       const studentData = {
         ...data,
-        batches: batchId ? [batchId] : [] // Use an array of batch IDs as per schema
+        batches: data.batch ? [ batchNameToIdMap[data.batch] ] : []
       };
       
       const response = await axios.post("https://bootcamp-project-oll.onrender.com/api/students", studentData);
@@ -203,7 +203,7 @@ const AdminStudents = () => {
         name: student.name,
         email: student.email,
         phone: student.phone,
-        batches: batchName ? [batchName] : [], // Wrap batch name in an array
+        batch: batchName, // Wrap batch name in an array
         age: student.age?.toString() || '',
         school: student.school || ''
       });
@@ -219,7 +219,7 @@ const AdminStudents = () => {
     setIsSubmitting(true);
     try {
       // Convert batch name to batch ID
-      const batchId = batchNameToIdMap[data.batches];
+      const batchId = batchNameToIdMap[data.batch];
       
       const studentData = {
         ...data,
@@ -778,29 +778,33 @@ const AdminStudents = () => {
               </div>
               
               <FormField
-                control={editForm.control}
-                name="batches"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Assigned Batch</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value[0] || ''}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a batch" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {batchesData.map(batch => (
-                          <SelectItem key={batch._id} value={batch.batchName}>
-                            {batch.batchName}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+  control={editForm.control}
+  name="batch"
+  render={({ field }) => (
+    <FormItem>
+      <FormLabel>Assigned Batch</FormLabel>
+      <FormControl>
+        <Select
+          onValueChange={field.onChange}
+          value={field.value}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select a batch" />
+          </SelectTrigger>
+          <SelectContent>
+            {batchesData.map(b => (
+              <SelectItem key={b._id} value={b.batchName}>
+                {b.batchName}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </FormControl>
+      <FormMessage />
+    </FormItem>
+  )}
+/>
+
               
               <DialogFooter>
                 <Button 
