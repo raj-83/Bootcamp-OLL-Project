@@ -58,7 +58,7 @@ const Profile = () => {
   useEffect(() => {
     const fetchStudentProfile = async () => {
       try {
-        const response = await fetch(`http://localhost:5000/api/students/${user?._id}`, {
+        const response = await fetch(`https://bootcamp-project-oll.onrender.com/api/students/${user?._id}`, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
           }
@@ -105,7 +105,7 @@ const Profile = () => {
 
   const handleSaveProfile = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/students/${user?._id}`, {
+      const response = await fetch(`https://bootcamp-project-oll.onrender.com/api/students/${user?._id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

@@ -12,7 +12,7 @@ import { format, parseISO } from 'date-fns';
 import { Link as RouterLink } from 'react-router-dom';
 import SaleForm from '@/components/student/SaleForm';
 import axios from 'axios';
-const API_URL = 'http://localhost:5000/api';
+const API_URL = 'https://bootcamp-project-oll.onrender.com/api';
 
 const StudentDashboard = () => {
   const { toast } = useToast();

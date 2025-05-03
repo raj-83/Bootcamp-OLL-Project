@@ -28,7 +28,7 @@
 //   const login = async (email: string, password: string) => {
 //     try {
 //       console.log('Attempting login with:', email);
-//       const response = await fetch('http://localhost:5000/api/auth/login', {
+//       const response = await fetch('https://bootcamp-project-oll.onrender.com/api/auth/login', {
 //         method: 'POST',
 //         headers: { 'Content-Type': 'application/json' },
 //         body: JSON.stringify({ email, password }),
@@ -64,7 +64,7 @@
 //   };
 
 //   const register = async (userData: any) => {
-//     const response = await fetch('http://localhost:5000/api/auth/register', {
+//     const response = await fetch('https://bootcamp-project-oll.onrender.com/api/auth/register', {
 //       method: 'POST',
 //       headers: { 'Content-Type': 'application/json' },
 //       body: JSON.stringify(userData),
@@ -132,7 +132,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         
         // Optional: Verify token is still valid with your API
         // try {
-        //   const response = await fetch('http://localhost:5000/api/auth/verify', {
+        //   const response = await fetch('https://bootcamp-project-oll.onrender.com/api/auth/verify', {
         //     headers: { Authorization: `Bearer ${userData.token}` }
         //   });
         //   if (!response.ok) {
@@ -159,7 +159,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const login = async (email: string, password: string) => {
     try {
       console.log('Attempting login with:', email);
-      const response = await fetch('http://localhost:5000/api/auth/login', {
+      const response = await fetch('https://bootcamp-project-oll.onrender.com/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -195,7 +195,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const register = async (userData: any) => {
     try {
-      const response = await fetch('http://localhost:5000/api/auth/register', {
+      const response = await fetch('https://bootcamp-project-oll.onrender.com/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(userData),

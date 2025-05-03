@@ -110,12 +110,12 @@ const BatchDetails = () => {
     const fetchBatchData = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(`http://localhost:5000/api/batches/${batchId}`);
+        const response = await axios.get(`https://bootcamp-project-oll.onrender.com/api/batches/${batchId}`);
         const batch = response.data;
   
         // 1️⃣ teacher as before
         if (batch.teacher) {
-          const { data: t } = await axios.get(`http://localhost:5000/api/teachers/${batch.teacher}`);
+          const { data: t } = await axios.get(`https://bootcamp-project-oll.onrender.com/api/teachers/${batch.teacher}`);
           setTeacherName(t.name);
         }
   
@@ -126,7 +126,7 @@ const BatchDetails = () => {
           await Promise.all(
             batch.students.map(async (studId) => {
               try {
-                const { data: s } = await axios.get(`http://localhost:5000/api/students/${studId}`);
+                const { data: s } = await axios.get(`https://bootcamp-project-oll.onrender.com/api/students/${studId}`);
                 namesMap[studId] = s.name;
               } catch {
                 namesMap[studId] = 'Unknown';
@@ -152,7 +152,7 @@ const BatchDetails = () => {
   
     const fetchSessions = async () => {
       try {
-        const response = await axios.get(`http://localhost:5000/api/sessions/batch/${batchId}`);
+        const response = await axios.get(`https://bootcamp-project-oll.onrender.com/api/sessions/batch/${batchId}`);
         setSessions(response.data);
       } catch (err) {
         console.error('Error fetching sessions:', err);

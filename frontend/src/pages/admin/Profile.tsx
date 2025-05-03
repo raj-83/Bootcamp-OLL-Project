@@ -55,7 +55,7 @@ const AdminProfile = () => {
           return;
         }
         
-        const response = await fetch(`http://localhost:5000/api/admin/${adminId}`);
+        const response = await fetch(`https://bootcamp-project-oll.onrender.com/api/admin/${adminId}`);
         
         if (response.ok) {
           const adminData = await response.json();
@@ -109,7 +109,7 @@ const AdminProfile = () => {
   useEffect(() => {
     const fetchPlatformStats = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/batches');
+        const response = await fetch('https://bootcamp-project-oll.onrender.com/api/batches');
         
         if (response.ok) {
           const batches = await response.json();
@@ -179,7 +179,7 @@ const AdminProfile = () => {
         return;
       }
       
-      const response = await fetch(`http://localhost:5000/api/admin/${adminId}`, {
+      const response = await fetch(`https://bootcamp-project-oll.onrender.com/api/admin/${adminId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json"

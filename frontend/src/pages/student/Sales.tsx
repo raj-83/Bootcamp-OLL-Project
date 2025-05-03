@@ -81,7 +81,7 @@ const Sales = () => {
       try {
         setLoading(true);
         const token = localStorage.getItem('token');
-        const response = await axios.get('http://localhost:5000/api/sales/my-sales', {
+        const response = await axios.get('https://bootcamp-project-oll.onrender.com/api/sales/my-sales', {
           headers: { Authorization: `Bearer ${token}` }
         });
         setSales(response.data);
@@ -135,7 +135,7 @@ const Sales = () => {
       }
 
       const token = localStorage.getItem('token');
-      const response = await axios.post('http://localhost:5000/api/sales', {
+      const response = await axios.post('https://bootcamp-project-oll.onrender.com/api/sales', {
         product,
         amount,
         customer: formData.customer,

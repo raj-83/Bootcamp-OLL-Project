@@ -49,7 +49,7 @@ const MentorEarnings = () => {
           throw new Error('Teacher ID not found in localStorage');
         }
 
-        const response = await axios.get(`http://localhost:5000/api/earnings/teacher/${teacherId}`);
+        const response = await axios.get(`https://bootcamp-project-oll.onrender.com/api/earnings/teacher/${teacherId}`);
         setEarningsData(response.data);
         setError(null);
       } catch (err) {

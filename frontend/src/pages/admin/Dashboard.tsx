@@ -27,7 +27,7 @@ const AdminDashboard = () => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-        const response = await fetch('http://localhost:5000/api/dashboard/stats');
+        const response = await fetch('https://bootcamp-project-oll.onrender.com/api/dashboard/stats');
         
         if (!response.ok) {
           throw new Error('Failed to fetch dashboard data');

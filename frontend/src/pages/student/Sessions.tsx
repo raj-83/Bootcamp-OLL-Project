@@ -57,7 +57,7 @@ const StudentSessions = () => {
         console.error("Error parsing token:", e);
       }
 
-      const response = await axios.get('http://localhost:5000/api/sessions/student', {
+      const response = await axios.get('https://bootcamp-project-oll.onrender.com/api/sessions/student', {
         headers: {
           Authorization: `Bearer ${token}`
         }

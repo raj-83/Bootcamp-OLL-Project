@@ -46,7 +46,7 @@ import { toast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import axios from "axios";
 
-const API_URL =  "http://localhost:5000/api";
+const API_URL =  "https://bootcamp-project-oll.onrender.com/api";
 
 const Sessions = () => {
   const [sessions, setSessions] = useState([]);

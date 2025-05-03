@@ -36,7 +36,7 @@ const MentorDashboard = () => {
         };
         
         // Fetch teacher dashboard data with auth token
-        const response = await axios.get('http://localhost:5000/api/teachers/dashboard', config);
+        const response = await axios.get('https://bootcamp-project-oll.onrender.com/api/teachers/dashboard', config);
         setDashboardData(response.data);
         setLoading(false);
       } catch (err) {

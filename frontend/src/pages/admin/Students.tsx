@@ -120,8 +120,8 @@ const AdminStudents = () => {
     setLoading(true);
     try {
       const [studentsRes, batchesRes] = await Promise.all([
-        axios.get("http://localhost:5000/api/students"),
-        axios.get("http://localhost:5000/api/batches")
+        axios.get("https://bootcamp-project-oll.onrender.com/api/students"),
+        axios.get("https://bootcamp-project-oll.onrender.com/api/batches")
       ]);
       
       setStudentsData(studentsRes.data);
@@ -165,7 +165,7 @@ const AdminStudents = () => {
         batches: batchId ? [batchId] : [] // Use an array of batch IDs as per schema
       };
       
-      const response = await axios.post("http://localhost:5000/api/students", studentData);
+      const response = await axios.post("https://bootcamp-project-oll.onrender.com/api/students", studentData);
       toast({
         title: "Student added",
         description: "New student has been successfully added"
@@ -227,7 +227,7 @@ const AdminStudents = () => {
       };
       
       const response = await axios.patch(
-        `http://localhost:5000/api/students/${currentStudent._id}`, 
+        `https://bootcamp-project-oll.onrender.com/api/students/${currentStudent._id}`, 
         studentData
       );
       
@@ -262,7 +262,7 @@ const AdminStudents = () => {
     
     setIsSubmitting(true);
     try {
-      await axios.delete(`http://localhost:5000/api/students/${currentStudent._id}`);
+      await axios.delete(`https://bootcamp-project-oll.onrender.com/api/students/${currentStudent._id}`);
       
       toast({
         title: "Student deleted",

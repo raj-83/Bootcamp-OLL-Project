@@ -51,7 +51,7 @@ const MentorProfile = () => {
         }
         
         // Fetch teacher data
-        const teacherResponse = await axios.get(`http://localhost:5000/api/teachers/${teacherId}`);
+        const teacherResponse = await axios.get(`https://bootcamp-project-oll.onrender.com/api/teachers/${teacherId}`);
         const teacherData = teacherResponse.data;
         
         setProfile(teacherData);
@@ -60,7 +60,7 @@ const MentorProfile = () => {
         // Fetch student data for each student ID
         if (teacherData.students && teacherData.students.length > 0) {
           const studentsPromises = teacherData.students.map(studentId => 
-            axios.get(`http://localhost:5000/api/students/${studentId}`)
+            axios.get(`https://bootcamp-project-oll.onrender.com/api/students/${studentId}`)
           );
           
           const studentsResponses = await Promise.all(studentsPromises);

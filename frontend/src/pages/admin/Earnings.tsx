@@ -66,7 +66,7 @@ const AdminEarnings = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(`http://localhost:5000/api/admin/earnings?timeRange=${timeRange}`);
+        const response = await axios.get(`https://bootcamp-project-oll.onrender.com/api/admin/earnings?timeRange=${timeRange}`);
         
         // Update state with received data
         setTotalEarningsData(response.data.totalEarningsData);

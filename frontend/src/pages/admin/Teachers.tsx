@@ -106,7 +106,7 @@ const AdminTeachers = () => {
   const fetchTeachers = async () => {
     try {
       setLoading(true);
-      const res = await fetch("http://localhost:5000/api/teachers");
+      const res = await fetch("https://bootcamp-project-oll.onrender.com/api/teachers");
       const data = await res.json();
       setTeachersData(data);
     } catch (err) {
@@ -127,7 +127,7 @@ const AdminTeachers = () => {
   
   const handleAddTeacher = async (data) => {
     try {
-      const response = await fetch("http://localhost:5000/api/teachers", {
+      const response = await fetch("https://bootcamp-project-oll.onrender.com/api/teachers", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -163,7 +163,7 @@ const AdminTeachers = () => {
 
   const handleEditTeacher = async (data) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/teachers/${selectedTeacher._id}`, {
+      const response = await fetch(`https://bootcamp-project-oll.onrender.com/api/teachers/${selectedTeacher._id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json"
@@ -198,7 +198,7 @@ const AdminTeachers = () => {
 
   const handleDeleteTeacher = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/teachers/${selectedTeacher._id}`, {
+      const response = await fetch(`https://bootcamp-project-oll.onrender.com/api/teachers/${selectedTeacher._id}`, {
         method: "DELETE"
       });
   

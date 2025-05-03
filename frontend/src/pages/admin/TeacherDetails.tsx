@@ -59,12 +59,12 @@ const AdminTeacherDetails = () => {
      const fetchTeacherBatchAndStudent = async () => {
       try {
         setLoading(true);
-        const teacherResponse = await axios.get(`http://localhost:5000/api/teachers/${teacherId}`);
+        const teacherResponse = await axios.get(`https://bootcamp-project-oll.onrender.com/api/teachers/${teacherId}`);
         setTeacherData(teacherResponse.data);
 
         const batchIds = teacherResponse.data.batches || [];
         const batchPromises = batchIds.map((batchId) =>
-          axios.get(`http://localhost:5000/api/batches/${batchId}`)
+          axios.get(`https://bootcamp-project-oll.onrender.com/api/batches/${batchId}`)
         );
 
         const batchResponses = await Promise.all(batchPromises);
@@ -73,7 +73,7 @@ const AdminTeacherDetails = () => {
 
         const studentIds = teacherResponse.data.students || [];
         const studentPromises = studentIds.map((studentId) =>
-          axios.get(`http://localhost:5000/api/students/${studentId}`)
+          axios.get(`https://bootcamp-project-oll.onrender.com/api/students/${studentId}`)
         );
         const studentResponses = await Promise.all(studentPromises);
         const fetchedStudents = studentResponses.map((response) => response.data);

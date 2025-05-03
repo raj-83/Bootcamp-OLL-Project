@@ -15,7 +15,7 @@ const AdminStudentDetails = () => {
   useEffect(() => {
     const fetchStudentData = async () => {
       try {
-        const response = await fetch(`http://localhost:5000/api/students/${studentId}`);
+        const response = await fetch(`https://bootcamp-project-oll.onrender.com/api/students/${studentId}`);
         if (!response.ok) {
           throw new Error(`Failed to fetch student data: ${response.status}`);
         }

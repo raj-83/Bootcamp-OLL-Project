@@ -33,7 +33,7 @@ const BatchDetails = () => {
       try {
         setLoading(true);
         // Fetch batch data using the correct API endpoint
-        const batchResponse = await axios.get(`http://localhost:5000/api/batches/${batchId}`);
+        const batchResponse = await axios.get(`https://bootcamp-project-oll.onrender.com/api/batches/${batchId}`);
         setBatchData(batchResponse.data);
         
         // Get student IDs from the batch data
@@ -41,7 +41,7 @@ const BatchDetails = () => {
         
         // Fetch each student's data using individual requests
         const studentPromises = studentIds.map(studentId => 
-          axios.get(`http://localhost:5000/api/students/${studentId}`)
+          axios.get(`https://bootcamp-project-oll.onrender.com/api/students/${studentId}`)
         );
         
         // Wait for all student requests to complete
