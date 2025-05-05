@@ -16,6 +16,12 @@ import earningsRoutes from "./routes/earning.route.js";
 import adminEarningsRoutes from "./routes/admin-earning.route.js";
 import salesRoutes from "./routes/sales.route.js"; // Import sales routes
 import feedbackRoutes from "./routes/feedback.route.js"
+import { fileURLToPath } from "url";
+import connectDB from "./config/db.js";
+import path, { dirname } from "path";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 dotenv.config();
 const app = express();
@@ -23,21 +29,16 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// MongoDB connection
-const connectDB = async () => {
-  try {
-    await mongoose.connect(process.env.MONGO_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
-    console.log("✅ MongoDB connected successfully");
-  } catch (error) {
-    console.error("❌ MongoDB connection failed:", error.message);
-    process.exit(1); // Exit if unable to connect
-  }
-};
+app.use(
+  "/uploads",
+  express.static(path.join(__dirname, "uploads"))
+);
 
 connectDB();
+
+app.get("/healthcheck", (req, res) => {
+  res.status(200).json({ status: "OK", uptime: process.uptime() });
+});
 
 app.use("/api/sessions", sessionRoutes); // Assuming you have a session route
 app.use("/api/batches", batchRoutes);
@@ -51,7 +52,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api', taskRoutes);
 app.use('/api/earnings', earningsRoutes);
 app.use('/api/sales', salesRoutes);
-// app.use('/api/feedback', feedbackRoutes);
+app.use('/api/feedback', feedbackRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
