@@ -78,6 +78,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+const apiUrl = import.meta.env.VITE_REACT_API_URL || "https://localhost:5000";
+
 const AdminBatches = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
@@ -154,7 +156,7 @@ const AdminBatches = () => {
     setIsLoading(true);
     try {
       // Modify this to populate the students field or request count
-      const res = await fetch("https://bootcamp-project-oll.onrender.com/api/batches?populate=students");
+      const res = await fetch(`${apiUrl}/api/batches?populate=students`);
       const data = await res.json();
   
       // Process the data to include teacher names
@@ -185,7 +187,7 @@ const AdminBatches = () => {
   useEffect(() => {
     const fetchTeachers = async () => {
       try {
-        const res = await fetch("https://bootcamp-project-oll.onrender.com/api/teachers");
+        const res = await fetch(`${apiUrl}/api/teachers`);
         const data = await res.json();
         setTeachersData(data);
 
@@ -253,7 +255,7 @@ const AdminBatches = () => {
 
   const handleAddBatch = async (data) => {
     try {
-      const response = await fetch("https://bootcamp-project-oll.onrender.com/api/batches", {
+      const response = await fetch(`${apiUrl}/api/batches`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -321,7 +323,7 @@ const AdminBatches = () => {
     setIsLoading(true);
     try {
       const response = await fetch(
-        `https://bootcamp-project-oll.onrender.com/api/batches/${currentBatch._id}`,
+        `${apiUrl}/api/batches/${currentBatch._id}`,
         {
           method: "PUT",
           headers: {
@@ -379,7 +381,7 @@ const AdminBatches = () => {
     setIsLoading(true);
     try {
       const response = await fetch(
-        `https://bootcamp-project-oll.onrender.com/api/batches/${currentBatch._id}`,
+        `${apiUrl}/api/batches/${currentBatch._id}`,
         {
           method: "DELETE",
         }

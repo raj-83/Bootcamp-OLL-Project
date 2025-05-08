@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 
+const apiUrl = import.meta.env.VITE_REACT_API_URL || "https://localhost:5000";
 const BatchDetails = () => {
   const { batchId } = useParams();
   const [batchData, setBatchData] = useState(null);
@@ -33,7 +34,7 @@ const BatchDetails = () => {
       try {
         setLoading(true);
         // Fetch batch data using the correct API endpoint
-        const batchResponse = await axios.get(`https://bootcamp-project-oll.onrender.com/api/batches/${batchId}`);
+        const batchResponse = await axios.get(`${apiUrl}/api/batches/${batchId}`);
         setBatchData(batchResponse.data);
         
         // Get student IDs from the batch data
@@ -41,7 +42,7 @@ const BatchDetails = () => {
         
         // Fetch each student's data using individual requests
         const studentPromises = studentIds.map(studentId => 
-          axios.get(`https://bootcamp-project-oll.onrender.com/api/students/${studentId}`)
+          axios.get(`${apiUrl}/api/students/${studentId}`)
         );
         
         // Wait for all student requests to complete

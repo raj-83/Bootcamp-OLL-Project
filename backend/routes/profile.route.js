@@ -1,5 +1,6 @@
 import express from 'express';
 import Profile from '../models/admin.model.js';
+import Student from '../models/student.model.js'; // Assuming you have a Student model
 
 const router = express.Router();
 
@@ -26,6 +27,23 @@ router.post("/", async (req, res) => {
   } catch (error) {
     console.error("Error saving profile:", error);
     res.status(500).json({ message: "Server error while saving profile" });
+  }
+});
+
+// Get student profile by ID
+router.get('/student/:id', async (req, res) => {
+  try {
+      const student = await Student.findById(req.params.id)
+          .populate('batches', 'name revenue'); // Populate batch info including revenue target
+      
+      if (!student) {
+          return res.status(404).json({ message: 'Student not found' });
+      }
+      
+      res.json(student);
+  } catch (error) {
+      console.error('Error fetching student profile:', error);
+      res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 

@@ -18,6 +18,7 @@ import salesRoutes from "./routes/sales.route.js"; // Import sales routes
 import feedbackRoutes from "./routes/feedback.route.js"
 import { fileURLToPath } from "url";
 import connectDB from "./config/db.js";
+import taskSubmission from "./routes/taskSubmission.route.js";
 import path, { dirname } from "path";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -53,6 +54,7 @@ app.use('/api', taskRoutes);
 app.use('/api/earnings', earningsRoutes);
 app.use('/api/sales', salesRoutes);
 app.use('/api/feedback', feedbackRoutes);
+app.use("/api/taskSubmission", taskSubmission)
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));

@@ -6,6 +6,7 @@ import { DollarSign, Users, Calendar, ArrowRight, BarChart3, Clock } from 'lucid
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import axios from 'axios';
 
+const apiUrl = import.meta.env.VITE_REACT_API_URL || "https://localhost:5000";
 const MentorDashboard = () => {
   const navigate = useNavigate();
   const [dashboardData, setDashboardData] = useState(null);
@@ -36,7 +37,7 @@ const MentorDashboard = () => {
         };
         
         // Fetch teacher dashboard data with auth token
-        const response = await axios.get('https://bootcamp-project-oll.onrender.com/api/teachers/dashboard', config);
+        const response = await axios.get(`${apiUrl}/api/teachers/dashboard`, config);
         setDashboardData(response.data);
         setLoading(false);
       } catch (err) {

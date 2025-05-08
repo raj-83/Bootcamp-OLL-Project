@@ -18,7 +18,10 @@ interface Session {
   status: 'upcoming' | 'completed' | 'cancelled' | 'rescheduled';
   batchName: string;
   notes: string;
+  meetingLink?: string;
 }
+
+const apiUrl = import.meta.env.VITE_REACT_API_URL || "https://localhost:5000";
 
 const StudentSessions = () => {
   const [activeTab, setActiveTab] = useState<string>("all");
@@ -57,7 +60,7 @@ const StudentSessions = () => {
         console.error("Error parsing token:", e);
       }
 
-      const response = await axios.get('https://bootcamp-project-oll.onrender.com/api/sessions/student', {
+      const response = await axios.get(`${apiUrl}/api/sessions/student`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -105,12 +108,26 @@ const StudentSessions = () => {
     }
   };
 
-  const handleJoinSession = (joinLink: string) => {
-    window.open(joinLink, "_blank");
+  const handleJoinSession = (meetingLink: string | undefined) => {
+    if (meetingLink) {
+      window.open(meetingLink, "_blank");
+    } else {
+      toast({
+        title: "Error",
+        description: "Meeting link not available for this session",
+        variant: "destructive"
+      });
+    }
   };
 
-  const handleViewRecording = (recordingUrl: string) => {
-    window.open(recordingUrl, "_blank");
+  const handleViewRecording = (sessionId: string) => {
+    // This would ideally fetch the recording URL from the backend or navigate to a recordings page
+    // For now, we'll just show a toast notification
+    toast({
+      title: "Recording",
+      description: "Recordings feature will be available soon",
+      variant: "default"
+    });
   };
 
   if (loading) {
@@ -157,7 +174,7 @@ const StudentSessions = () => {
                       <TableHead>Topic</TableHead>
                       <TableHead>Batch</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>Notes</TableHead>
+                      <TableHead>Action</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -188,7 +205,33 @@ const StudentSessions = () => {
                         </TableCell>
                         
                         <TableCell>
-                          <div className="text-sm text-muted-foreground">{session.notes}</div>
+                          {(session.status === "upcoming" || session.status === "rescheduled") && (
+                            <Button 
+                              size="sm" 
+                              className="flex items-center gap-1" 
+                              onClick={() => handleJoinSession(session.meetingLink)}
+                              disabled={!session.meetingLink}
+                            >
+                              <Video className="h-4 w-4" />
+                              Join Session
+                            </Button>
+                          )}
+                          
+                          {session.status === "completed" && (
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="flex items-center gap-1" 
+                              onClick={() => handleViewRecording(session.id)}
+                            >
+                              <Play className="h-4 w-4" />
+                              View Recording
+                            </Button>
+                          )}
+                          
+                          {session.status === "cancelled" && (
+                            <span className="text-sm text-muted-foreground">Session Cancelled</span>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}

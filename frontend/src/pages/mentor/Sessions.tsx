@@ -39,6 +39,8 @@ import {
   Check,
   Plus,
   Loader2,
+  ExternalLink,
+  Video as VideoIcon,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -46,7 +48,9 @@ import { toast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import axios from "axios";
 
-const API_URL =  "https://bootcamp-project-oll.onrender.com/api";
+const API_URL =
+  import.meta.env.VITE_REACT_API_URL ||
+  "https://bootcamp-project-oll.onrender.com";
 
 const Sessions = () => {
   const [sessions, setSessions] = useState([]);
@@ -58,12 +62,15 @@ const Sessions = () => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [sessionToDelete, setSessionToDelete] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [attendanceData, setAttendanceData] = useState([]);
+const [loadingAttendance, setLoadingAttendance] = useState(false);
   const [newSession, setNewSession] = useState({
     title: "",
     batch: "",
     date: format(new Date(), "yyyy-MM-dd"),
     time: "",
     notes: "",
+    meetingLink: "",
   });
   const [editMode, setEditMode] = useState(false);
 
@@ -79,13 +86,13 @@ const Sessions = () => {
 
       // Fetch teacher's sessions
       const sessionsResponse = await axios.get(
-        `${API_URL}/sessions/teacher/${teacherId}`
+        `${API_URL}/api/sessions/teacher/${teacherId}`
       );
       setSessions(sessionsResponse.data);
 
       // Fetch teacher's batches for the dropdown
       const batchesResponse = await axios.get(
-        `${API_URL}/batches/teacher/${teacherId}`
+        `${API_URL}/api/batches/teacher/${teacherId}`
       );
       setBatches(batchesResponse.data);
     } catch (error) {
@@ -160,13 +167,15 @@ const Sessions = () => {
       if (editMode && selectedSession) {
         // Update existing session
         const response = await axios.put(
-          `${API_URL}/sessions/${selectedSession._id}`,
+          `${API_URL}/api/sessions/${selectedSession._id}`,
           newSession
         );
 
         // Update local state
         const updatedSessions = sessions.map((session) =>
-          session._id === selectedSession._id ? response.data.session : session
+          session._id === selectedSession._id
+            ? { ...session, status: "completed" }
+            : session
         );
         setSessions(updatedSessions);
 
@@ -176,7 +185,10 @@ const Sessions = () => {
         });
       } else {
         // Create new session
-        const response = await axios.post(`${API_URL}/sessions`, newSession);
+        const response = await axios.post(
+          `${API_URL}/api/sessions`,
+          newSession
+        );
         setSessions([...sessions, response.data.session]);
 
         toast({
@@ -192,6 +204,7 @@ const Sessions = () => {
         date: format(new Date(), "yyyy-MM-dd"),
         time: "",
         notes: "",
+        meetingLink: "",
       });
       setShowSessionDialog(false);
       setEditMode(false);
@@ -218,6 +231,7 @@ const Sessions = () => {
       date: format(new Date(session.date), "yyyy-MM-dd"),
       time: session.time,
       notes: session.notes || "",
+      meetingLink: session.meetingLink || "",
     });
     setEditMode(true);
     setShowSessionDialog(true);
@@ -225,7 +239,7 @@ const Sessions = () => {
 
   const handleDeleteSession = async () => {
     try {
-      await axios.delete(`${API_URL}/sessions/${sessionToDelete}`);
+      await axios.delete(`${API_URL}/api/sessions/${sessionToDelete}`);
 
       // Update local state
       setSessions(
@@ -253,69 +267,105 @@ const Sessions = () => {
     setShowDeleteDialog(true);
   };
 
-  const handleOpenAttendance = (session) => {
+  const handleOpenAttendance = async (session) => {
     setSelectedSession(session);
-    setShowAttendanceDialog(true);
+    setLoadingAttendance(true);
+
+    try {
+      // Fetch real students and their attendance status
+      const response = await axios.get(
+        `${API_URL}/api/sessions/${session._id}/attendance`
+      );
+
+      setAttendanceData(response.data.attendance);
+    } catch (error) {
+      console.error("Error fetching attendance data:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load attendance data",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingAttendance(false);
+      setShowAttendanceDialog(true);
+    }
   };
 
   const handleAttendanceChange = (studentId, checked) => {
-    if (!selectedSession) return;
-
-    // If session doesn't have attendance yet, create mock attendance
-    if (!selectedSession.attendance) {
-      // Generate mock students
-      const mockAttendance = Array.from({
-        length: selectedSession.students,
-      }).map((_, index) => ({
-        id: index + 1,
-        name: `Student ${index + 1}`,
-        present: false,
-      }));
-      selectedSession.attendance = mockAttendance;
-    }
-
-    // Update attendance
-    const updatedAttendance = selectedSession.attendance.map((student) =>
-      student.id === studentId ? { ...student, present: checked } : student
+    // Update the attendance data
+    const updatedAttendance = attendanceData.map((record) =>
+      record.student._id === studentId
+        ? { ...record, present: checked }
+        : record
     );
 
-    // Update session
-    const updatedSession = {
-      ...selectedSession,
-      attendance: updatedAttendance,
-    };
-    const updatedSessions = sessions.map((session) =>
-      session._id === selectedSession._id ? updatedSession : session
-    );
-
-    setSessions(updatedSessions);
-    setSelectedSession(updatedSession);
+    setAttendanceData(updatedAttendance);
   };
 
-  const handleSaveAttendance = () => {
-    if (!selectedSession) return;
+  const handleSaveAttendance = async () => {
+    try {
+      // Save attendance to the backend
+      await axios.post(
+        `${API_URL}/api/sessions/${selectedSession._id}/attendance`,
+        { attendance: attendanceData }
+      );
 
-    // Update session status to completed
-    const updatedSessions = sessions.map((session) =>
-      session._id === selectedSession._id
-        ? {
-            ...session,
-            status: "completed",
-            attendance: selectedSession.attendance,
-          }
-        : session
-    );
+      // Update local session status
+      const updatedSessions = sessions.map((session) =>
+        session._id === selectedSession._id
+          ? { ...session, status: "completed" }
+          : session
+      );
 
-    setSessions(updatedSessions);
-    setShowAttendanceDialog(false);
+      setSessions(updatedSessions);
+      setShowAttendanceDialog(false);
+
+      toast({
+        title: "Attendance saved",
+        description: "The attendance has been recorded successfully",
+      });
+
+      // Refresh data to ensure consistency
+      fetchData();
+    } catch (error) {
+      console.error("Error saving attendance:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save attendance data",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Function to handle joining a session
+  const handleJoinSession = (session) => {
+    if (!session.meetingLink) {
+      toast({
+        title: "No meeting link available",
+        description: "This session doesn't have a meeting link set up.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Open the meeting link in a new tab
+    window.open(session.meetingLink, "_blank", "noopener,noreferrer");
 
     toast({
-      title: "Attendance saved",
-      description: "The attendance has been recorded",
+      title: "Joining session",
+      description: "Opening the meeting link in a new tab.",
     });
+  };
 
-    // In a real app, you would also send this to the backend
-    // For now, we're just updating the UI
+  // Function to handle viewing session recordings
+  const handleViewRecording = (session) => {
+    // This is a placeholder - in a real implementation you would
+    // either redirect to a recordings page or show a dialog with recordings
+    toast({
+      title: "Recordings feature",
+      description: "This feature will allow you to view session recordings.",
+      variant: "default",
+    });
   };
 
   if (loading) {
@@ -341,6 +391,7 @@ const Sessions = () => {
               date: format(new Date(), "yyyy-MM-dd"),
               time: "",
               notes: "",
+              meetingLink: "",
             });
             setShowSessionDialog(true);
           }}
@@ -408,7 +459,7 @@ const Sessions = () => {
                           <Users className="h-4 w-4 text-muted-foreground" />
                           <span>
                             {session.students ||
-                              session.batch?.students.length ||
+                              session.batch?.students?.length ||
                               0}{" "}
                             Students
                           </span>
@@ -423,14 +474,35 @@ const Sessions = () => {
                           <p>{session.notes}</p>
                         </div>
                       )}
+                      {/* {session.meetingLink && (
+                        <div className="mt-4 text-sm">
+                          <span className="font-medium">Meeting link:</span>{" "}
+                          <a
+                            href={session.meetingLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary hover:underline truncate inline-block max-w-md"
+                          >
+                            {session.meetingLink}
+                          </a>
+                        </div>
+                      )} */}
                     </CardContent>
-                    <CardFooter>
+                    <CardFooter className="flex gap-2">
                       <Button
                         variant="default"
-                        className="w-full"
+                        className="w-1/2"
                         onClick={() => handleOpenAttendance(session)}
                       >
                         Take Attendance
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        className="w-1/2"
+                        onClick={() => handleJoinSession(session)}
+                      >
+                        <ExternalLink className="mr-2 h-4 w-4" />
+                        Join Session
                       </Button>
                     </CardFooter>
                   </Card>
@@ -502,14 +574,35 @@ const Sessions = () => {
                           <p>{session.notes}</p>
                         </div>
                       )}
+                      {/* {session.meetingLink && (
+                        <div className="mt-4 text-sm">
+                          <span className="font-medium">Meeting link:</span>{" "}
+                          <a
+                            href={session.meetingLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary hover:underline truncate inline-block max-w-md"
+                          >
+                            {session.meetingLink}
+                          </a>
+                        </div>
+                      )} */}
                     </CardContent>
-                    <CardFooter>
+                    <CardFooter className="flex gap-2">
                       <Button
                         variant="outline"
-                        className="w-full"
+                        className="w-1/2"
                         onClick={() => handleOpenAttendance(session)}
                       >
                         View Attendance
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        className="w-1/2"
+                        onClick={() => handleViewRecording(session)}
+                      >
+                        <VideoIcon className="mr-2 h-4 w-4" />
+                        View Recording
                       </Button>
                     </CardFooter>
                   </Card>
@@ -559,6 +652,34 @@ const Sessions = () => {
                       </div>
                       <div className="text-xs mt-1 text-muted-foreground">
                         {session.batch?.batchName || "No batch"}
+                      </div>
+                      <div className="flex items-center justify-between mt-2">
+                        <span
+                          className={`text-xs px-2 py-1 rounded-full ${
+                            session.status === "upcoming"
+                              ? "bg-primary/10 text-primary"
+                              : "bg-green-100 text-green-800"
+                          }`}
+                        >
+                          {session.status === "upcoming"
+                            ? "Upcoming"
+                            : "Completed"}
+                        </span>
+                        {session.status === "upcoming" &&
+                          session.meetingLink && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 text-xs"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleJoinSession(session);
+                              }}
+                            >
+                              <ExternalLink className="h-3 w-3 mr-1" />
+                              Join
+                            </Button>
+                          )}
                       </div>
                     </div>
                   ))}
@@ -660,6 +781,19 @@ const Sessions = () => {
                 rows={3}
               />
             </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="meetingLink" className="text-right">
+                Meeting Link
+              </Label>
+              <Input
+                id="meetingLink"
+                name="meetingLink"
+                value={newSession.meetingLink}
+                onChange={handleNewSessionChange}
+                className="col-span-3"
+                placeholder="https://meet.google.com/xxx-xxxx-xxx or Zoom link"
+              />
+            </div>
           </div>
           <DialogFooter>
             <Button
@@ -688,44 +822,49 @@ const Sessions = () => {
                 : "Take Attendance"}
             </DialogTitle>
             <DialogDescription>
-              {selectedSession?.title} - {selectedSession?.date}
+              {selectedSession?.title} -{" "}
+              {selectedSession?.date &&
+                format(new Date(selectedSession.date), "MMMM d, yyyy")}
             </DialogDescription>
           </DialogHeader>
+
           <div className="py-4">
-            {selectedSession && (
+            {loadingAttendance ? (
+              <div className="flex items-center justify-center h-40">
+                <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
+                <span>Loading attendance data...</span>
+              </div>
+            ) : (
               <>
-                {/* If attendance exists, show it */}
-                {selectedSession.attendance ? (
+                {attendanceData && attendanceData.length > 0 ? (
                   <div className="space-y-2">
-                    {selectedSession.attendance.map((student) => (
+                    {attendanceData.map((record) => (
                       <div
-                        key={student.id}
+                        key={record.student._id}
                         className="flex items-center justify-between p-2 rounded-md hover:bg-muted/50"
                       >
                         <div className="flex items-center gap-2">
                           <Checkbox
-                            id={`student-${student.id}`}
-                            checked={student.present}
+                            id={`student-${record.student._id}`}
+                            checked={record.present}
                             onCheckedChange={(checked) =>
                               handleAttendanceChange(
-                                student.id,
-                                checked as boolean
+                                record.student._id,
+                                checked
                               )
                             }
-                            disabled={selectedSession.status === "completed"}
+                            disabled={selectedSession?.status === "completed"}
                           />
-                          <Label htmlFor={`student-${student.id}`}>
-                            {student.name}
+                          <Label htmlFor={`student-${record.student._id}`}>
+                            {record.student.name}
                           </Label>
                         </div>
-                        {student.present ? (
-                          <span className="text-xs text-success flex items-center">
+                        {record.present ? (
+                          <span className="text-xs text-green-600 flex items-center">
                             <Check size={14} className="mr-1" /> Present
                           </span>
                         ) : (
-                          <span className="text-xs text-destructive">
-                            Absent
-                          </span>
+                          <span className="text-xs text-red-500">Absent</span>
                         )}
                       </div>
                     ))}
@@ -733,16 +872,11 @@ const Sessions = () => {
                     <div className="mt-4 p-3 bg-muted/50 rounded-md">
                       <p className="text-sm font-medium">Attendance Summary</p>
                       <p className="text-sm">
-                        {
-                          selectedSession.attendance.filter((s) => s.present)
-                            .length
-                        }{" "}
-                        out of {selectedSession.attendance.length} students
-                        present (
+                        {attendanceData.filter((r) => r.present).length} out of{" "}
+                        {attendanceData.length} students present (
                         {Math.round(
-                          (selectedSession.attendance.filter((s) => s.present)
-                            .length /
-                            selectedSession.attendance.length) *
+                          (attendanceData.filter((r) => r.present).length /
+                            attendanceData.length) *
                             100
                         )}
                         %)
@@ -750,36 +884,14 @@ const Sessions = () => {
                     </div>
                   </div>
                 ) : (
-                  // If no attendance yet, create a form with mock data
-                  <div className="space-y-2">
-                    {Array.from({ length: selectedSession.students }).map(
-                      (_, index) => (
-                        <div
-                          key={index}
-                          className="flex items-center justify-between p-2 rounded-md hover:bg-muted/50"
-                        >
-                          <div className="flex items-center gap-2">
-                            <Checkbox
-                              id={`student-${index}`}
-                              onCheckedChange={(checked) =>
-                                handleAttendanceChange(
-                                  index + 1,
-                                  checked as boolean
-                                )
-                              }
-                            />
-                            <Label htmlFor={`student-${index}`}>
-                              Student {index + 1}
-                            </Label>
-                          </div>
-                        </div>
-                      )
-                    )}
+                  <div className="text-center py-10">
+                    No students found for this session.
                   </div>
                 )}
               </>
             )}
           </div>
+
           <DialogFooter>
             <Button
               variant="outline"
@@ -787,9 +899,11 @@ const Sessions = () => {
             >
               Close
             </Button>
-            {selectedSession?.status !== "completed" && (
-              <Button onClick={handleSaveAttendance}>Save Attendance</Button>
-            )}
+            {selectedSession?.status !== "completed" &&
+              attendanceData &&
+              attendanceData.length > 0 && (
+                <Button onClick={handleSaveAttendance}>Save Attendance</Button>
+              )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -813,9 +927,7 @@ const Sessions = () => {
             </Button>
             <Button
               variant="destructive"
-              onClick={() =>
-                sessionToDelete && handleDeleteSession
-              }
+              onClick={() => sessionToDelete && handleDeleteSession()}
             >
               <Trash2 className="h-4 w-4 mr-2" />
               Delete Session

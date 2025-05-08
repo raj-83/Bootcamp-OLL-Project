@@ -28,7 +28,7 @@
 //   const login = async (email: string, password: string) => {
 //     try {
 //       console.log('Attempting login with:', email);
-//       const response = await fetch('https://bootcamp-project-oll.onrender.com/api/auth/login', {
+//       const response = await fetch('${apiUrl}/api/auth/login', {
 //         method: 'POST',
 //         headers: { 'Content-Type': 'application/json' },
 //         body: JSON.stringify({ email, password }),
@@ -64,7 +64,7 @@
 //   };
 
 //   const register = async (userData: any) => {
-//     const response = await fetch('https://bootcamp-project-oll.onrender.com/api/auth/register', {
+//     const response = await fetch('${apiUrl}/api/auth/register', {
 //       method: 'POST',
 //       headers: { 'Content-Type': 'application/json' },
 //       body: JSON.stringify(userData),
@@ -115,6 +115,8 @@ interface AuthContextType {
   checkAccess: (allowedRoles: string[]) => boolean;
 }
 
+const apiUrl = import.meta.env.VITE_REACT_API_URL || "https://localhost:5000";
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
@@ -132,7 +134,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         
         // Optional: Verify token is still valid with your API
         // try {
-        //   const response = await fetch('https://bootcamp-project-oll.onrender.com/api/auth/verify', {
+        //   const response = await fetch('${apiUrl}/api/auth/verify', {
         //     headers: { Authorization: `Bearer ${userData.token}` }
         //   });
         //   if (!response.ok) {
@@ -159,7 +161,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const login = async (email: string, password: string) => {
     try {
       console.log('Attempting login with:', email);
-      const response = await fetch('https://bootcamp-project-oll.onrender.com/api/auth/login', {
+      const response = await fetch(`${apiUrl}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -195,7 +197,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const register = async (userData: any) => {
     try {
-      const response = await fetch('https://bootcamp-project-oll.onrender.com/api/auth/register', {
+      const response = await fetch(`${apiUrl}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(userData),

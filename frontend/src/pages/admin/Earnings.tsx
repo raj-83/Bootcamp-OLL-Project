@@ -43,6 +43,7 @@ import {
   Loader2
 } from 'lucide-react';
 
+const apiUrl = import.meta.env.VITE_REACT_API_URL || "https://localhost:5000";
 const AdminEarnings = () => {
   const [timeRange, setTimeRange] = useState('30days');
   const [loading, setLoading] = useState(true);
@@ -66,7 +67,7 @@ const AdminEarnings = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(`https://bootcamp-project-oll.onrender.com/api/admin/earnings?timeRange=${timeRange}`);
+        const response = await axios.get(`${apiUrl}/api/admin/earnings?timeRange=${timeRange}`);
         
         // Update state with received data
         setTotalEarningsData(response.data.totalEarningsData);

@@ -33,9 +33,10 @@ router.get("/student", protect, async (req, res) => {
       const sessionObject = session.toObject();
       
       // Add derived status (upcoming or completed)
-      const sessionDate = new Date(session.date);
-      const today = new Date();
-      sessionObject.status = sessionDate >= today ? 'upcoming' : 'completed';
+      // const sessionDate = new Date(session.date);
+      // const today = new Date();
+      // sessionObject.status = sessionDate >= today ? 'upcoming' : 'completed';
+      sessionObject.status = session.status
       
       // Add batch name
       sessionObject.batchName = session.batch?.batchName || 'Unknown Batch';
@@ -47,7 +48,8 @@ router.get("/student", protect, async (req, res) => {
         time: sessionObject.time,
         status: sessionObject.status,
         batchName: sessionObject.batchName,
-        notes: sessionObject.notes
+        notes: sessionObject.notes,
+        meetingLink: sessionObject.meetingLink
       };
     });
 
@@ -61,7 +63,7 @@ router.get("/student", protect, async (req, res) => {
 // Create a new session
 router.post("/", async (req, res) => {
   try {
-    const { title, batch, date, time, notes } = req.body;
+    const { title, batch, date, time, notes, meetingLink } = req.body;
 
     if (!title || !batch || !date || !time || !notes) {
       return res.status(400).json({ error: "All fields are required" });
@@ -73,7 +75,8 @@ router.post("/", async (req, res) => {
       batch, // This should be the batch ObjectId
       date,
       time,
-      notes
+      notes,
+      meetingLink // Add this field
     });
 
     const savedSession = await newSession.save();
@@ -134,9 +137,10 @@ router.get("/teacher", protect, async (req, res) => {
       const sessionObject = session.toObject();
       
       // Add derived status (upcoming or completed)
-      const sessionDate = new Date(session.date);
-      const today = new Date();
-      sessionObject.status = sessionDate >= today ? 'upcoming' : 'completed';
+      // const sessionDate = new Date(session.date);
+      // const today = new Date();
+      // sessionObject.status = sessionDate >= today ? 'upcoming' : 'completed';
+      sessionObject.status = session.status;
       
       // Add students count from the batch
       sessionObject.students = session.batch?.totalStudents || 0;
@@ -153,41 +157,35 @@ router.get("/teacher", protect, async (req, res) => {
 
 
 // Get upcoming sessions for a specific student
+// Get upcoming sessions for a specific student
 router.get('/upcoming/student/:studentId', async (req, res) => {
   try {
-    const studentId = req.params.studentId;
-    
-    // Find student to get their batches
-    const student = await Student.findById(studentId);
+    const { studentId } = req.params;
+    const student = await Student.findById(studentId, 'batches');
     if (!student) {
       return res.status(404).json({ message: 'Student not found' });
     }
-    
-    // Get current date
-    const currentDate = new Date();
-    
-    // Find upcoming sessions for the student's batches
+
+    const now = new Date();
+    // Grab only the next upcoming session
     const sessions = await Session.find({
       batch: { $in: student.batches },
-      date: { $gte: currentDate }
-    }).sort({ date: 1 }).limit(1);
-    
-    // Add meetingLink field based on the batch
-    const sessionsWithLink = await Promise.all(sessions.map(async (session) => {
-      const batch = await Batch.findById(session.batch);
-      const sessionObj = session.toObject();
-      
-      // Add a mock meeting link - in a real application this would come from your database
-      sessionObj.meetingLink = `https://zoom.us/j/${batch._id}`;
-      
-      return sessionObj;
-    }));
-    
-    res.json(sessionsWithLink);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+      date: { $gte: now }
+    })
+    .sort({ date: 1 })
+    .limit(1)
+    // if you still want batch details, populate only what you need:
+    .populate('batch', 'batchName');
+
+    // sessions is already plain JSON–ready; it includes session.meetingLink
+    return res.json(sessions);
+
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: err.message });
   }
 });
+
 
 // Get sessions for non-authenticated requests
 router.get("/teacher/:teacherId", async (req, res) => {
@@ -213,9 +211,9 @@ router.get("/teacher/:teacherId", async (req, res) => {
       const sessionObject = session.toObject();
       
       // Add derived status (upcoming or completed)
-      const sessionDate = new Date(session.date);
-      const today = new Date();
-      sessionObject.status = sessionDate >= today ? 'upcoming' : 'completed';
+      // const sessionDate = new Date(session.date);
+      // const today = new Date();
+      sessionObject.status = session.status;
       
       // Add students count from the batch
       sessionObject.students = session.batch?.totalStudents || 0;
@@ -250,7 +248,7 @@ router.get("/:id", async (req, res) => {
 // Update a session
 router.put("/:id", async (req, res) => {
   try {
-    const { title, batch, date, time, notes } = req.body;
+    const { title, batch, date, time, notes, meetingLink } = req.body;
     const sessionId = req.params.id;
 
     // Find the existing session to get its current batch
@@ -270,7 +268,8 @@ router.put("/:id", async (req, res) => {
         batch,
         date,
         time,
-        notes
+        notes,
+        meetingLink // Add this field
       },
       { new: true, runValidators: true }
     );
@@ -346,5 +345,134 @@ router.get("/batch/:batchId", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch batch sessions" });
   }
 });
+
+// Get students for attendance
+router.get('/:sessionId/attendance', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    
+    const session = await Session.findById(sessionId)
+      .populate('batch')
+      .populate('attendance.student');
+      
+    if (!session) {
+      return res.status(404).json({ message: 'Session not found' });
+    }
+    
+    // If the session already has attendance records, return them
+    if (session.attendance && session.attendance.length > 0) {
+      return res.status(200).json({ attendance: session.attendance });
+    }
+    
+    // Otherwise, get students from the batch
+    const batch = await Batch.findById(session.batch._id)
+      .populate('students', 'name email');
+      
+    if (!batch || !batch.students || batch.students.length === 0) {
+      return res.status(200).json({ attendance: [] });
+    }
+    
+    // Create attendance template for all students in the batch
+    const attendanceTemplate = batch.students.map(student => ({
+      student: {
+        _id: student._id,
+        name: student.name,
+        email: student.email
+      },
+      present: false
+    }));
+    
+    res.status(200).json({ attendance: attendanceTemplate });
+  } catch (error) {
+    console.error('Error fetching attendance data:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Update attendance for a session
+router.post('/:sessionId/attendance', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const { attendance } = req.body;
+    
+    if (!attendance || !Array.isArray(attendance)) {
+      return res.status(400).json({ message: 'Invalid attendance data' });
+    }
+    
+    const session = await Session.findById(sessionId);
+    if (!session) {
+      return res.status(404).json({ message: 'Session not found' });
+    }
+    
+    // Update session with attendance data
+    session.attendance = attendance;
+    session.status = 'completed'; // Mark the session as completed
+    await session.save();
+    
+    // Update attendance percentage for each student
+    for (const record of attendance) {
+      await updateStudentAttendance(record.student, record.present);
+    }
+    
+    res.status(200).json({ 
+      message: 'Attendance recorded successfully',
+      session
+    });
+  } catch (error) {
+    console.error('Error recording attendance:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Helper function to update student attendance percentage
+async function updateStudentAttendance(studentId, isPresent) {
+  try {
+    // Find all sessions where this student is enrolled (via their batches)
+    const student = await Student.findById(studentId);
+    if (!student) return;
+    
+    // Get student's batches
+    const studentBatches = student.batches;
+    
+    // Find all completed sessions for these batches
+    const sessions = await Session.find({
+      batch: { $in: studentBatches },
+      status: 'completed',
+      'attendance.student': { $exists: true }
+    });
+    
+    if (!sessions || sessions.length === 0) return;
+    
+    // Calculate attendance percentage
+    let totalSessions = 0;
+    let attendedSessions = 0;
+    
+    for (const session of sessions) {
+      const studentAttendance = session.attendance.find(
+        record => record.student.toString() === studentId.toString()
+      );
+      
+      if (studentAttendance) {
+        totalSessions++;
+        if (studentAttendance.present) {
+          attendedSessions++;
+        }
+      }
+    }
+    
+    // Calculate percentage (0-100)
+    const attendancePercentage = totalSessions > 0 
+      ? Math.round((attendedSessions / totalSessions) * 100)
+      : 0;
+    
+    // Update student's attendance percentage
+    await Student.findByIdAndUpdate(studentId, {
+      attendance: attendancePercentage
+    });
+    
+  } catch (error) {
+    console.error('Error updating student attendance:', error);
+  }
+}
 
 export default router;

@@ -12,7 +12,7 @@ import { format, parseISO } from 'date-fns';
 import { Link as RouterLink } from 'react-router-dom';
 import SaleForm from '@/components/student/SaleForm';
 import axios from 'axios';
-const API_URL = 'https://bootcamp-project-oll.onrender.com/api';
+const API_URL = import.meta.env.VITE_REACT_API_URL || 'https://bootcamp-project-oll.onrender.com';
 
 const StudentDashboard = () => {
   const { toast } = useToast();
@@ -44,39 +44,42 @@ const StudentDashboard = () => {
         setLoading(true);
         
         // Fetch student profile
-        const studentResponse = await axios.get(`${API_URL}/profile/student/${studentId}`);
+        const studentResponse = await axios.get(`${API_URL}/api/profile/student/${studentId}`);
         setStudentData(studentResponse.data);
         
+        // Update attendance and task completion stats from student data
+        const attendanceRate = studentResponse.data.attendance || 0;
+        const taskCompletionRate = studentResponse.data.taskCompletion || 0;
+        
         // Fetch tasks
-        const tasksResponse = await axios.get(`${API_URL}/tasks/student/${studentId}`);
+        const tasksResponse = await axios.get(`${API_URL}/api/tasks/student/${studentId}`);
         setTasks(tasksResponse.data);
         
         // Fetch next session
-        const sessionResponse = await axios.get(`${API_URL}/sessions/upcoming/student/${studentId}`);
+        const sessionResponse = await axios.get(`${API_URL}/api/sessions/upcoming/student/${studentId}`);
         if (sessionResponse.data && sessionResponse.data.length > 0) {
           setNextSession(sessionResponse.data[0]);
         }
         
         // Fetch earnings
-        const earningsResponse = await axios.get(`${API_URL}/earnings/student/${studentId}`);
+        const earningsResponse = await axios.get(`${API_URL}/api/earnings/student/${studentId}`);
         setTotalEarnings(earningsResponse.data.totalEarnings || 0);
         
         // Fetch sales data for customer count
-        const salesResponse = await axios.get(`${API_URL}/sales/student/${studentId}`);
+        const salesResponse = await axios.get(`${API_URL}/api/sales/student/${studentId}`);
         const customerCount = new Set(salesResponse.data.map(sale => sale.customer)).size;
         
         // Set stats
         setStats({
-          attendance: studentResponse.data.attendance || 0,
-          taskCompletion: studentResponse.data.taskCompletion || 0,
+          attendance: attendanceRate,
+          taskCompletion: taskCompletionRate,
           customerCount: customerCount
         });
         
         // If there's a batch, get the sales target
         if (studentResponse.data.batches && studentResponse.data.batches.length > 0) {
-          const batchId = studentResponse.data.batches[0]; // Assuming we use the first batch
-          const batchResponse = await axios.get(`${API_URL}/batches/${batchId}`);
-          setSalesTarget(batchResponse.data.revenue || 500);
+          const batchId = studentResponse.data.batches[0]._id; // Using the populated batch data
+          setSalesTarget(studentResponse.data.batches[0].revenue || 500);
         }
         
       } catch (error) {
@@ -94,6 +97,8 @@ const StudentDashboard = () => {
     fetchDashboardData();
   }, [toast]);
 
+console.log("Meeting Link", nextSession?.meetingLink);
+
   const handleJoinSession = () => {
     if (nextSession && nextSession.meetingLink) {
       window.open(nextSession.meetingLink, "_blank");
@@ -109,7 +114,6 @@ const StudentDashboard = () => {
       });
     }
   };
-
 
   // Parse task status to match the format in your TaskCard component
   const formatTaskStatus = (task) => {
@@ -145,13 +149,23 @@ const StudentDashboard = () => {
   const sessionTime = nextSession ? nextSession.time : null;
 
   // Get student's current batch
-  const currentBatch = studentData?.batches?.[0]?.batchName || "Current Batch";
+  const currentBatch = studentData?.batches?.[0]?.name || "Current Batch";
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-[70vh]">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold mb-2">Loading dashboard...</h2>
+          <p className="text-muted-foreground">Please wait while we fetch your data.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Student Dashboard</h1>
-        <Badge variant="outline" className="font-normal">{currentBatch}</Badge>
       </div>
 
       <Card className="bg-gradient-to-br from-blue-50 to-white">

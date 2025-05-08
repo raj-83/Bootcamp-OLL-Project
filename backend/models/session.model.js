@@ -24,7 +24,26 @@ const sessionSchema = new mongoose.Schema({
     type: String,
     required: true,
     trim: true
-  }
+  },
+  meetingLink: {
+    type: String,
+    trim: true
+  },
+  status: {
+    type: String,
+    enum: ['upcoming', 'completed'],
+    default: 'upcoming'
+  },
+  attendance: [{
+    student: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Student'
+    },
+    present: {
+      type: Boolean,
+      default: false
+    }
+  }]
 }, {
   timestamps: true
 });

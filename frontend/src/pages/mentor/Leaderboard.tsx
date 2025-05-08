@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import UserAvatar from '@/components/ui-custom/UserAvatar';
 
+const apiUrl = import.meta.env.VITE_REACT_API_URL || "https://localhost:5000";
+
 const nationalStudentLeaderboard = [
   { id: 1, name: 'Alex Johnson', points: 1250, earnings: 345, school: 'Lincoln High School', rank: 1, nationalRank: 15, taskCompletion: 95, attendance: 98 },
   { id: 2, name: 'Samantha Lee', points: 1100, earnings: 290, school: 'Washington Academy', rank: 2, nationalRank: 23, taskCompletion: 92, attendance: 95 },

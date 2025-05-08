@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, AreaChart, Area } from 'recharts';
 
+const apiUrl = import.meta.env.VITE_REACT_API_URL || "https://localhost:5000";
 const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -27,7 +28,7 @@ const AdminDashboard = () => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-        const response = await fetch('https://bootcamp-project-oll.onrender.com/api/dashboard/stats');
+        const response = await fetch(`${apiUrl}/api/dashboard/stats`);
         
         if (!response.ok) {
           throw new Error('Failed to fetch dashboard data');

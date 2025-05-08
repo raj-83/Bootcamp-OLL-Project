@@ -1,5 +1,5 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
@@ -10,15 +10,38 @@ import { toast } from '@/hooks/use-toast';
 
 interface BatchReviewFormProps {
   batchName: string;
+  batchId: string;
   onComplete?: () => void;
 }
 
-const BatchReviewForm: React.FC<BatchReviewFormProps> = ({ batchName, onComplete }) => {
+const apiUrl = import.meta.env.VITE_REACT_API_URL || "https://localhost:5000";
+
+const BatchReviewForm: React.FC<BatchReviewFormProps> = ({ batchName, batchId, onComplete }) => {
   const [rating, setRating] = useState<number>(0);
-  const [feedback, setFeedback] = useState<string>('');
+  const [review, setReview] = useState<string>('');
   const [files, setFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hoveredRating, setHoveredRating] = useState<number | null>(null);
+  const [studentId, setStudentId] = useState<string>('');
+  const [student, setStudent] = useState<any>(null);
+  
+  useEffect(() => {
+    // Get student ID from localStorage
+    const id = localStorage.getItem('id');
+    if (id) {
+      setStudentId(id);
+      fetchStudentData(id);
+    }
+  }, []);
+  
+  const fetchStudentData = async (id: string) => {
+    try {
+      const res = await axios.get(`${apiUrl}/api/students/${id}`);
+      setStudent(res.data);
+    } catch (error) {
+      console.error('Error fetching student data:', error);
+    }
+  };
   
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -30,7 +53,7 @@ const BatchReviewForm: React.FC<BatchReviewFormProps> = ({ batchName, onComplete
     setFiles([]);
   };
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (rating === 0) {
@@ -42,10 +65,28 @@ const BatchReviewForm: React.FC<BatchReviewFormProps> = ({ batchName, onComplete
       return;
     }
     
-    if (!feedback.trim()) {
+    if (!review.trim()) {
       toast({
-        title: "Missing feedback",
+        title: "Missing review",
         description: "Please provide your review",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (!studentId) {
+      toast({
+        title: "Authentication error",
+        description: "You need to be logged in to submit a review",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (!batchId) {
+      toast({
+        title: "Batch information missing",
+        description: "Unable to identify which batch to review",
         variant: "destructive"
       });
       return;
@@ -53,22 +94,48 @@ const BatchReviewForm: React.FC<BatchReviewFormProps> = ({ batchName, onComplete
     
     setIsSubmitting(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      setIsSubmitting(false);
+    try {
+      // Create form data for multipart/form-data submission
+      const formData = new FormData();
+      formData.append('student', studentId);
+      formData.append('batch', batchId);
+      formData.append('rating', String(rating));
+      formData.append('review', review);
+      
+      // Only append file if it exists
+      if (files.length > 0) {
+        formData.append('image', files[0]);
+      }
+      
+      // Submit to API
+      await axios.post(`${apiUrl}/api/feedback/review`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
       toast({
         title: "Review submitted",
         description: "Thank you for your review!",
       });
       
       setRating(0);
-      setFeedback('');
+      setReview('');
       setFiles([]);
       
       if (onComplete) {
         onComplete();
       }
-    }, 1000);
+    } catch (error) {
+      console.error('Error submitting review:', error);
+      toast({
+        title: "Submission failed",
+        description: "There was an error submitting your review. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
   
   return (
@@ -105,11 +172,11 @@ const BatchReviewForm: React.FC<BatchReviewFormProps> = ({ batchName, onComplete
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="feedback">Your Review</Label>
+            <Label htmlFor="review">Your Review</Label>
             <Textarea 
-              id="feedback" 
-              value={feedback}
-              onChange={(e) => setFeedback(e.target.value)}
+              id="review" 
+              value={review}
+              onChange={(e) => setReview(e.target.value)}
               placeholder="Please share your experience..."
               rows={5}
             />

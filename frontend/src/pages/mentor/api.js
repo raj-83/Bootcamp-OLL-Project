@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = process.env.REACT_APP_API_URL || 'https://bootcamp-project-oll.onrender.com/api';
+const API_URL = import.meta.env.REACT_APP_API_URL || 'https://bootcamp-project-oll.onrender.com/api';
 
 const api = axios.create({
   baseURL: API_URL,

@@ -10,6 +10,7 @@ import { Separator } from '@/components/ui/separator';
 import { toast } from '@/hooks/use-toast';
 import axios from 'axios';
 
+const apiUrl = import.meta.env.VITE_REACT_API_URL || "https://localhost:5000";
 
 const MentorProfile = () => {
   // Use State for profile data
@@ -56,7 +57,7 @@ const MentorProfile = () => {
         }
         
         // Fetch teacher data
-        const teacherResponse = await axios.get(`https://bootcamp-project-oll.onrender.com/api/teachers/${teacherId}`);
+        const teacherResponse = await axios.get(`${apiUrl}/api/teachers/${teacherId}`);
         const teacherData = teacherResponse.data;
         
         setProfile(teacherData);
@@ -65,7 +66,7 @@ const MentorProfile = () => {
         // Fetch student data for each student ID
         if (teacherData.students && teacherData.students.length > 0) {
           const studentsPromises = teacherData.students.map(studentId => 
-            axios.get(`https://bootcamp-project-oll.onrender.com/api/students/${studentId}`)
+            axios.get(`${apiUrl}/api/students/${studentId}`)
           );
           
           const studentsResponses = await Promise.all(studentsPromises);

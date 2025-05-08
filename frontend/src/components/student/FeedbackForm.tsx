@@ -1,8 +1,7 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -14,11 +13,22 @@ interface FeedbackFormProps {
   onComplete?: () => void;
 }
 
+const apiUrl = import.meta.env.VITE_REACT_API_URL || "https://localhost:5000";
+
 const FeedbackForm: React.FC<FeedbackFormProps> = ({ onComplete }) => {
   const [category, setCategory] = useState<string>('');
   const [feedback, setFeedback] = useState<string>('');
   const [files, setFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [studentId, setStudentId] = useState<string>('');
+  
+  useEffect(() => {
+    // Get student ID from localStorage
+    const id = localStorage.getItem('id');
+    if (id) {
+      setStudentId(id);
+    }
+  }, []);
   
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -30,7 +40,7 @@ const FeedbackForm: React.FC<FeedbackFormProps> = ({ onComplete }) => {
     setFiles([]);
   };
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!category) {
@@ -51,11 +61,36 @@ const FeedbackForm: React.FC<FeedbackFormProps> = ({ onComplete }) => {
       return;
     }
     
+    if (!studentId) {
+      toast({
+        title: "Authentication error",
+        description: "You need to be logged in to submit feedback",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setIsSubmitting(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      setIsSubmitting(false);
+    try {
+      // Create form data for multipart/form-data submission
+      const formData = new FormData();
+      formData.append('student', studentId);
+      formData.append('category', category);
+      formData.append('feedback', feedback);
+      
+      // Only append file if it exists
+      if (files.length > 0) {
+        formData.append('image', files[0]);
+      }
+      
+      // Submit to API
+      await axios.post(`${apiUrl}/api/feedback/feedback`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
       toast({
         title: "Feedback submitted",
         description: "Thank you for your feedback!",
@@ -68,7 +103,16 @@ const FeedbackForm: React.FC<FeedbackFormProps> = ({ onComplete }) => {
       if (onComplete) {
         onComplete();
       }
-    }, 1000);
+    } catch (error) {
+      console.error('Error submitting feedback:', error);
+      toast({
+        title: "Submission failed",
+        description: "There was an error submitting your feedback. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
   
   return (

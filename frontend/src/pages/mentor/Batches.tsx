@@ -15,6 +15,7 @@ import { Search, Users, Calendar, DollarSign } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import axios from 'axios';
 
+const apiUrl = import.meta.env.VITE_REACT_API_URL || "https://localhost:5000";
 const MentorBatches = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
@@ -30,7 +31,7 @@ const MentorBatches = () => {
         setLoading(true);
         // Assume we have the teacher ID from auth context or local storage
         const teacherId = localStorage.getItem('id'); // Adjust based on your auth implementation
-        const response = await axios.get(`https://bootcamp-project-oll.onrender.com/api/batches/teacher/${teacherId}`);
+        const response = await axios.get(`${apiUrl}/api/batches/teacher/${teacherId}`);
         
         // Transform the data to match the frontend structure
         const formattedBatches = response.data.map(batch => {

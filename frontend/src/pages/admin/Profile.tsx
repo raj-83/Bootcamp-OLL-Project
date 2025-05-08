@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Upload, Mail, Phone, User, MapPin, Briefcase, Calendar, Shield, Edit, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
+const apiUrl = import.meta.env.VITE_REACT_API_URL || "https://localhost:5000";
 const AdminProfile = () => {
   // Initial profile state with empty values
   const [profile, setProfile] = useState({
@@ -55,7 +56,7 @@ const AdminProfile = () => {
           return;
         }
         
-        const response = await fetch(`https://bootcamp-project-oll.onrender.com/api/admin/${adminId}`);
+        const response = await fetch(`${apiUrl}/api/admin/${adminId}`);
         
         if (response.ok) {
           const adminData = await response.json();
@@ -109,7 +110,7 @@ const AdminProfile = () => {
   useEffect(() => {
     const fetchPlatformStats = async () => {
       try {
-        const response = await fetch('https://bootcamp-project-oll.onrender.com/api/batches');
+        const response = await fetch(`${apiUrl}/api/batches`);
         
         if (response.ok) {
           const batches = await response.json();
@@ -179,7 +180,7 @@ const AdminProfile = () => {
         return;
       }
       
-      const response = await fetch(`https://bootcamp-project-oll.onrender.com/api/admin/${adminId}`, {
+      const response = await fetch(`${apiUrl}/api/admin/${adminId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json"

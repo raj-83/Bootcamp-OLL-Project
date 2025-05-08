@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { ArrowLeft, Mail, Phone, School, Calendar, MapPin, GraduationCap, Users, Clock, CheckSquare } from 'lucide-react';
 import  UserAvatar  from '@/components/ui-custom/UserAvatar'; // Assuming you have this component
 
+const apiUrl = import.meta.env.VITE_REACT_API_URL || "https://localhost:5000";
 const AdminStudentDetails = () => {
   const { studentId } = useParams();
   const navigate = useNavigate();
@@ -15,7 +16,7 @@ const AdminStudentDetails = () => {
   useEffect(() => {
     const fetchStudentData = async () => {
       try {
-        const response = await fetch(`https://bootcamp-project-oll.onrender.com/api/students/${studentId}`);
+        const response = await fetch(`${apiUrl}/api/students/${studentId}`);
         if (!response.ok) {
           throw new Error(`Failed to fetch student data: ${response.status}`);
         }

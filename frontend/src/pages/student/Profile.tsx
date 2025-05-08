@@ -41,6 +41,8 @@ interface StudentProfile {
   teachers: any[];
 }
 
+const apiUrl = import.meta.env.VITE_REACT_API_URL || "https://localhost:5000";
+
 const Profile = () => {
   const { user } = useAuth();
   const [profileData, setProfileData] = useState<StudentProfile | null>(null);
@@ -58,7 +60,7 @@ const Profile = () => {
   useEffect(() => {
     const fetchStudentProfile = async () => {
       try {
-        const response = await fetch(`https://bootcamp-project-oll.onrender.com/api/students/${user?._id}`, {
+        const response = await fetch(`${apiUrl}/api/students/${user?._id}`, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
           }
@@ -105,7 +107,7 @@ const Profile = () => {
 
   const handleSaveProfile = async () => {
     try {
-      const response = await fetch(`https://bootcamp-project-oll.onrender.com/api/students/${user?._id}`, {
+      const response = await fetch(`${apiUrl}/api/students/update/${user?._id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

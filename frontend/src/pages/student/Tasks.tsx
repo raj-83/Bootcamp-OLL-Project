@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import TaskCardUpdated from '@/components/student/TaskCardUpdated';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -21,114 +21,290 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
+import axios from 'axios';
 
 // Define the task type to ensure consistency
-type TaskStatus = 'pending' | 'submitted' | 'completed' | 'overdue' | 'resubmit';
+export type TaskStatus = 'pending' | 'submitted' | 'completed' | 'overdue' | 'resubmit';
 
 interface TaskAttachment {
-  id: number;
+  id?: number;
   name: string;
-  size: string;
+  size: string | number;
   url: string;
+  fileType?: string;
 }
 
 interface Task {
-  id: number;
+  id: string;
+  _id: string;
   title: string;
   description: string;
   status: TaskStatus;
   deadline: string;
+  dueDate: string;
   submittedAt?: string;
   feedback?: string;
   rating?: number;
   points: number;
+  batch: string;
   attachments?: TaskAttachment[];
+  submission?: {
+    _id: string;
+    notes: string;
+    fileUrl?: string;
+    fileName?: string;
+    fileSize?: number;
+    fileType?: string;
+    status: string;
+    feedback?: string;
+    rating?: number;
+    points?: number;
+    submissionDate: string;
+  };
 }
 
-// Mock data for student tasks
-const studentTasks: Task[] = [
-  {
-    id: 1, 
-    title: 'Create a Business Plan', 
-    description: 'Draft a comprehensive business plan for your product idea.', 
-    status: 'completed', 
-    deadline: '2023-09-30',
-    submittedAt: '2023-09-28',
-    feedback: 'Excellent work! Your business plan is well-structured and shows great potential.', 
-    rating: 5,
-    points: 100,
-    attachments: [
-      { id: 1, name: 'business_plan.pdf', size: '2.4 MB', url: '#' },
-      { id: 2, name: 'financial_projections.xlsx', size: '1.1 MB', url: '#' }
-    ]
-  },
-  {
-    id: 2, 
-    title: 'Design Product Packaging', 
-    description: 'Create eco-friendly packaging designs for your product.', 
-    status: 'resubmit', 
-    deadline: '2023-10-10',
-    submittedAt: '2023-10-08',
-    feedback: 'Good start, but please consider making the design more sustainable. Review materials section.',
-    points: 75,
-    attachments: [
-      { id: 3, name: 'packaging_design_v1.png', size: '3.2 MB', url: '#' }
-    ] 
-  },
-  {
-    id: 3, 
-    title: 'Marketing Strategy', 
-    description: 'Develop a marketing strategy to promote your product.', 
-    status: 'submitted', 
-    deadline: '2023-10-15',
-    submittedAt: '2023-10-14',
-    points: 0,
-    attachments: [
-      { id: 4, name: 'marketing_strategy.pdf', size: '1.8 MB', url: '#' },
-      { id: 5, name: 'social_media_plan.docx', size: '834 KB', url: '#' }
-    ]
-  },
-  {
-    id: 4, 
-    title: 'Financial Projection', 
-    description: 'Create a financial projection for your business for the next 6 months.', 
-    status: 'pending', 
-    deadline: '2023-10-25',
-    points: 0
-  },
-  {
-    id: 5, 
-    title: 'Sales Pitch', 
-    description: 'Prepare a 5-minute sales pitch for your product.', 
-    status: 'pending', 
-    deadline: '2023-11-05',
-    points: 0
-  },
-  {
-    id: 6, 
-    title: 'Customer Feedback Analysis', 
-    description: 'Collect and analyze feedback from at least 10 potential customers.', 
-    status: 'overdue', 
-    deadline: '2023-10-05',
-    points: 0
-  },
-];
-
-// Student profile stats
-const studentStats = {
-  taskCompletion: 65,
-  attendance: 90,
-  totalPointsEarned: 175,
-  totalPointsPossible: 300
-};
+// API URL from environment variable or default
+const API_URL = import.meta.env.VITE_REACT_API_URL || 'http://localhost:5000';
 
 const Tasks = () => {
-  const [tasks, setTasks] = useState<Task[]>(studentTasks);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [submissionText, setSubmissionText] = useState('');
-  const [attachmentName, setAttachmentName] = useState('');
+  const [submissionFile, setSubmissionFile] = useState<File | null>(null);
+  const [studentStats, setStudentStats] = useState({
+    taskCompletion: 0,
+    attendance: 0,
+    totalPointsEarned: 0,
+    totalPointsPossible: 0
+  });
   
+  // Get student ID from local storage
+  const studentId = typeof window !== 'undefined' ? localStorage.getItem('id') : null;
+  
+  // Fetch tasks and student data
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!studentId) {
+        setError("User not authenticated");
+        setLoading(false);
+        return;
+      }
+      
+      try {
+        setLoading(true);
+        
+        // Fetch student's tasks
+        const [studentResponse, tasksResponse, submissionsResponse] = await Promise.all([
+          axios.get(`${API_URL}/api/students/${studentId}`),
+          axios.get(`${API_URL}/api/tasks/student/${studentId}`),
+          axios.get(`${API_URL}/api/taskSubmission/student/${studentId}`)
+        ]);
+        
+        const student = studentResponse.data;
+        let fetchedTasks = tasksResponse.data;
+        const submissions = submissionsResponse.data;
+        
+        // Combine tasks with their submissions
+        fetchedTasks = fetchedTasks.map(task => {
+          const taskSubmission = submissions.find(sub => sub.task._id === task._id);
+          
+          // Format the task with the submission data if it exists
+          return {
+            id: parseInt(task._id, 10),
+            _id: task._id,
+            title: task.title,
+            description: task.description,
+            status: determineTaskStatus(task, taskSubmission),
+            deadline: task.dueDate,
+            dueDate: task.dueDate,
+            batch: task.batch,
+            points: taskSubmission?.points || 0,
+            feedback: taskSubmission?.feedback,
+            rating: taskSubmission?.rating,
+            submittedAt: taskSubmission?.submissionDate,
+            submission: taskSubmission ? {
+              _id: taskSubmission._id,
+              notes: taskSubmission.notes || '',
+              fileUrl: taskSubmission.fileUrl,
+              fileName: taskSubmission.fileName,
+              fileSize: taskSubmission.fileSize,
+              fileType: taskSubmission.fileType,
+              status: taskSubmission.status,
+              feedback: taskSubmission.feedback,
+              rating: taskSubmission.rating,
+              points: taskSubmission.points,
+              submissionDate: taskSubmission.submissionDate
+            } : undefined,
+            attachments: taskSubmission?.fileUrl ? [
+              {
+                id: 1,
+                name: taskSubmission.fileName || 'Unnamed file',
+                size: formatFileSize(taskSubmission.fileSize),
+                url: `${API_URL}${taskSubmission.fileUrl}`,
+                fileType: taskSubmission.fileType
+              }
+            ] : undefined
+          };
+        });
+        
+        setTasks(fetchedTasks);
+
+        // Set student stats
+        setStudentStats({
+          taskCompletion: student.taskCompletion || 0,
+          attendance: student.attendance || 0,
+          totalPointsEarned: submissions.reduce((total, sub) => total + (sub.points || 0), 0),
+          totalPointsPossible: fetchedTasks.length * 100 // Assuming each task is worth 100 points max
+        });
+        
+        setLoading(false);
+      } catch (err) {
+        console.error("Error fetching data:", err);
+        setError("Failed to load tasks. Please try again.");
+        setLoading(false);
+      }
+    };
+    
+    fetchData();
+  }, [studentId]);
+  
+  // Determine task status based on task and submission data
+  const determineTaskStatus = (task, submission) => {
+    if (!submission) {
+      // Check if task is overdue
+      const dueDate = new Date(task.dueDate);
+      const today = new Date();
+      if (today > dueDate) {
+        return 'overdue';
+      }
+      return 'pending';
+    }
+    
+    // If there's a submission, check its status
+    switch (submission.status) {
+      case 'approved':
+        return 'completed';
+      case 'resubmit':
+        return 'resubmit';
+      case 'submitted':
+      case 'reviewed':
+        return 'submitted';
+      default:
+        return task.status;
+    }
+  };
+  
+  // Format file size to human-readable format
+  const formatFileSize = (bytes) => {
+    if (!bytes) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+  
+  const handleFileChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      setSubmissionFile(e.target.files[0]);
+    }
+  };
+  
+  const handleViewSubmission = (task: Task) => {
+    setSelectedTask(task);
+  };
+
+  const handleSubmitTask = async (taskId: string, batchId: string) => {
+    if (!submissionText && !submissionFile) {
+      toast({
+        title: "Submission Error",
+        description: "Please add a description or an attachment to your submission.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!studentId) {
+      toast({
+        title: "Authentication Error",
+        description: "You must be logged in to submit a task.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      // Create form data for file upload
+      const formData = new FormData();
+      formData.append('studentId', studentId);
+      formData.append('taskId', taskId);
+      formData.append('batchId', batchId);
+      formData.append('notes', submissionText);
+      
+      if (submissionFile) {
+        formData.append('file', submissionFile);
+      }
+      
+      // Submit the task
+      await axios.post(`${API_URL}/api/taskSubmission/submit`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
+      // Update the local state to reflect the submission
+      const updatedTasks = tasks.map(task => {
+        if (task._id === taskId) {
+          return {
+            ...task,
+            status: 'submitted' as TaskStatus,
+            submittedAt: new Date().toISOString(),
+            submission: {
+              _id: '', // Will be updated when we refetch
+              notes: submissionText,
+              status: 'submitted',
+              submissionDate: new Date().toISOString()
+            },
+            attachments: submissionFile ? [
+              {
+                id: Date.now(),
+                name: submissionFile.name,
+                size: formatFileSize(submissionFile.size),
+                url: '#' // Will be updated when we refetch
+              }
+            ] : task.attachments
+          };
+        }
+        return task;
+      });
+      
+      setTasks(updatedTasks as Task[]);
+      setSubmissionText('');
+      setSubmissionFile(null);
+      
+      toast({
+        title: "Task Submitted",
+        description: "Your work has been submitted successfully!"
+      });
+      
+      // Refetch tasks to get updated data
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+      
+    } catch (err) {
+      console.error("Error submitting task:", err);
+      toast({
+        title: "Submission Failed",
+        description: "An error occurred while submitting your task. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  // Filter tasks by status
   const pendingTasks = tasks.filter(task => task.status === 'pending' || task.status === 'overdue');
   const submittedTasks = tasks.filter(task => task.status === 'submitted');
   const completedTasks = tasks.filter(task => task.status === 'completed');
@@ -147,57 +323,19 @@ const Tasks = () => {
   };
   
   const statusCounts = getStatusCounts();
-
-  const handleViewSubmission = (task: Task) => {
-    setSelectedTask(task);
-  };
-
-  const handleSubmitTask = (taskId: number) => {
-    if (!submissionText && !attachmentName) {
-      toast({
-        title: "Submission Error",
-        description: "Please add a description or an attachment to your submission.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    // Find the task and update its status
-    const updatedTasks = tasks.map(task => {
-      if (task.id === taskId) {
-        const newTask: Task = {
-          ...task,
-          status: 'submitted',
-          submittedAt: new Date().toISOString().split('T')[0],
-        };
-        
-        // Add attachment if provided
-        if (attachmentName) {
-          newTask.attachments = [
-            ...(task.attachments || []),
-            { 
-              id: Math.floor(Math.random() * 10000), 
-              name: attachmentName, 
-              size: '1.2 MB', 
-              url: '#' 
-            }
-          ];
-        }
-        
-        return newTask;
-      }
-      return task;
-    });
-
-    setTasks(updatedTasks);
-    setSubmissionText('');
-    setAttachmentName('');
-    
-    toast({
-      title: "Task Submitted",
-      description: "Your work has been submitted successfully!"
-    });
-  };
+  
+  if (loading) {
+    return <div className="flex items-center justify-center min-h-[400px]">Loading tasks...</div>;
+  }
+  
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px]">
+        <p className="text-destructive">{error}</p>
+        <Button onClick={() => window.location.reload()} className="mt-4">Try Again</Button>
+      </div>
+    );
+  }
   
   return (
     <div className="space-y-6">
@@ -298,8 +436,24 @@ const Tasks = () => {
               {allTasks.length > 0 ? (
                 allTasks.map(task => (
                   <TaskCardUpdated 
-                    key={task.id} 
-                    task={task} 
+                    key={task._id} 
+                    task={{
+                      id: parseInt(task._id, 10),
+                      title: task.title,
+                      description: task.description,
+                      status: task.status,
+                      deadline: task.deadline || task.dueDate,
+                      submittedAt: task.submittedAt,
+                      feedback: task.feedback,
+                      rating: task.rating,
+                      points: task.points || 0,
+                      attachments: task.attachments?.map((attachment, index) => ({
+                        id: attachment.id ?? index + 1,
+                        name: attachment.name,
+                        size: attachment.size.toString(),
+                        url: attachment.url
+                      }))
+                    }}
                     actions={
                       <div className="flex space-x-2 mt-2">
                         {['submitted', 'completed', 'resubmit'].includes(task.status) && (
@@ -319,14 +473,21 @@ const Tasks = () => {
                             <DialogTrigger asChild>
                               <Button size="sm" className="gap-1">
                                 <Upload size={14} />
-                                Submit
+                                {task.status === 'resubmit' ? 'Resubmit' : 'Submit'}
                               </Button>
                             </DialogTrigger>
                             <DialogContent>
                               <DialogHeader>
-                                <DialogTitle>Submit Task: {task.title}</DialogTitle>
+                                <DialogTitle>{task.status === 'resubmit' ? 'Resubmit' : 'Submit'} Task: {task.title}</DialogTitle>
                                 <DialogDescription>{task.description}</DialogDescription>
                               </DialogHeader>
+                              
+                              {task.status === 'resubmit' && task.feedback && (
+                                <div className="mb-4 p-3 bg-muted rounded-md text-sm">
+                                  <p className="font-medium mb-1">Feedback from mentor:</p>
+                                  {task.feedback}
+                                </div>
+                              )}
                               
                               <div className="space-y-4 my-4">
                                 <div className="space-y-2">
@@ -342,15 +503,11 @@ const Tasks = () => {
                                 
                                 <div className="space-y-2">
                                   <Label htmlFor="attachment">Upload Attachment</Label>
-                                  <div className="flex gap-2">
-                                    <Input 
-                                      id="attachment" 
-                                      placeholder="filename.pdf"
-                                      value={attachmentName}
-                                      onChange={(e) => setAttachmentName(e.target.value)}
-                                    />
-                                    <Button variant="outline" type="button">Browse</Button>
-                                  </div>
+                                  <Input 
+                                    id="attachment" 
+                                    type="file"
+                                    onChange={handleFileChange}
+                                  />
                                   <p className="text-xs text-muted-foreground">
                                     Supported formats: PDF, DOC, DOCX, JPG, PNG (max 10MB)
                                   </p>
@@ -361,7 +518,9 @@ const Tasks = () => {
                                 <DialogClose asChild>
                                   <Button variant="outline">Cancel</Button>
                                 </DialogClose>
-                                <Button onClick={() => handleSubmitTask(task.id)}>Submit Task</Button>
+                                <Button onClick={() => handleSubmitTask(task._id, task.batch)}>
+                                  {task.status === 'resubmit' ? 'Resubmit' : 'Submit'} Task
+                                </Button>
                               </DialogFooter>
                             </DialogContent>
                           </Dialog>
@@ -381,8 +540,15 @@ const Tasks = () => {
               {pendingTasks.length > 0 ? (
                 pendingTasks.map(task => (
                   <TaskCardUpdated 
-                    key={task.id} 
-                    task={task} 
+                    key={task._id} 
+                    task={{
+                      id: parseInt(task._id, 10),
+                      title: task.title,
+                      description: task.description,
+                      status: task.status,
+                      deadline: task.deadline || task.dueDate,
+                      points: task.points || 0
+                    }}
                     actions={
                       <Dialog>
                         <DialogTrigger asChild>
@@ -399,9 +565,9 @@ const Tasks = () => {
                           
                           <div className="space-y-4 my-4">
                             <div className="space-y-2">
-                              <Label htmlFor={`submission-${task.id}`}>Submission Notes</Label>
+                              <Label htmlFor={`submission-${task._id}`}>Submission Notes</Label>
                               <Textarea 
-                                id={`submission-${task.id}`} 
+                                id={`submission-${task._id}`} 
                                 placeholder="Describe your work or add any notes for your mentor..."
                                 value={submissionText}
                                 onChange={(e) => setSubmissionText(e.target.value)}
@@ -410,16 +576,12 @@ const Tasks = () => {
                             </div>
                             
                             <div className="space-y-2">
-                              <Label htmlFor={`attachment-${task.id}`}>Upload Attachment</Label>
-                              <div className="flex gap-2">
-                                <Input 
-                                  id={`attachment-${task.id}`} 
-                                  placeholder="filename.pdf"
-                                  value={attachmentName}
-                                  onChange={(e) => setAttachmentName(e.target.value)}
-                                />
-                                <Button variant="outline" type="button">Browse</Button>
-                              </div>
+                              <Label htmlFor={`attachment-${task._id}`}>Upload Attachment</Label>
+                              <Input 
+                                id={`attachment-${task._id}`} 
+                                type="file"
+                                onChange={handleFileChange}
+                              />
                               <p className="text-xs text-muted-foreground">
                                 Supported formats: PDF, DOC, DOCX, JPG, PNG (max 10MB)
                               </p>
@@ -430,7 +592,7 @@ const Tasks = () => {
                             <DialogClose asChild>
                               <Button variant="outline">Cancel</Button>
                             </DialogClose>
-                            <Button onClick={() => handleSubmitTask(task.id)}>Submit Task</Button>
+                            <Button onClick={() => handleSubmitTask(task._id, task.batch)}>Submit Task</Button>
                           </DialogFooter>
                         </DialogContent>
                       </Dialog>
@@ -448,8 +610,22 @@ const Tasks = () => {
               {submittedTasks.length > 0 ? (
                 submittedTasks.map(task => (
                   <TaskCardUpdated 
-                    key={task.id} 
-                    task={task} 
+                    key={task._id} 
+                    task={{
+                      id: parseInt(task._id, 10),
+                      title: task.title,
+                      description: task.description,
+                      status: task.status,
+                      deadline: task.deadline || task.dueDate,
+                      submittedAt: task.submittedAt,
+                      points: task.points || 0,
+                      attachments: task.attachments?.map((attachment, index) => ({
+                        id: attachment.id ?? index + 1,
+                        name: attachment.name,
+                        size: attachment.size.toString(),
+                        url: attachment.url
+                      }))
+                    }}
                     actions={
                       <Button 
                         variant="outline" 
@@ -474,8 +650,23 @@ const Tasks = () => {
               {resubmitTasks.length > 0 ? (
                 resubmitTasks.map(task => (
                   <TaskCardUpdated 
-                    key={task.id} 
-                    task={task} 
+                    key={task._id} 
+                    task={{
+                      id: parseInt(task._id, 10),
+                      title: task.title,
+                      description: task.description,
+                      status: task.status,
+                      deadline: task.deadline || task.dueDate,
+                      submittedAt: task.submittedAt,
+                      feedback: task.feedback,
+                      points: task.points || 0,
+                      attachments: task.attachments?.map((attachment, index) => ({
+                        id: attachment.id ?? index + 1,
+                        name: attachment.name,
+                        size: attachment.size.toString(),
+                        url: attachment.url
+                      }))
+                    }}
                     actions={
                       <div className="flex space-x-2 mt-2">
                         <Button 
@@ -508,9 +699,9 @@ const Tasks = () => {
                             
                             <div className="space-y-4 my-4">
                               <div className="space-y-2">
-                                <Label htmlFor={`resubmission-${task.id}`}>Submission Notes</Label>
+                                <Label htmlFor={`resubmission-${task._id}`}>Submission Notes</Label>
                                 <Textarea 
-                                  id={`resubmission-${task.id}`} 
+                                  id={`resubmission-${task._id}`} 
                                   placeholder="Describe the changes you've made based on the feedback..."
                                   value={submissionText}
                                   onChange={(e) => setSubmissionText(e.target.value)}
@@ -519,16 +710,12 @@ const Tasks = () => {
                               </div>
                               
                               <div className="space-y-2">
-                                <Label htmlFor={`reattachment-${task.id}`}>Upload Attachment</Label>
-                                <div className="flex gap-2">
-                                  <Input 
-                                    id={`reattachment-${task.id}`} 
-                                    placeholder="filename.pdf"
-                                    value={attachmentName}
-                                    onChange={(e) => setAttachmentName(e.target.value)}
-                                  />
-                                  <Button variant="outline" type="button">Browse</Button>
-                                </div>
+                                <Label htmlFor={`reattachment-${task._id}`}>Upload Attachment</Label>
+                                <Input 
+                                  id={`reattachment-${task._id}`} 
+                                  type="file"
+                                  onChange={handleFileChange}
+                                />
                                 <p className="text-xs text-muted-foreground">
                                   Supported formats: PDF, DOC, DOCX, JPG, PNG (max 10MB)
                                 </p>
@@ -539,7 +726,7 @@ const Tasks = () => {
                               <DialogClose asChild>
                                 <Button variant="outline">Cancel</Button>
                               </DialogClose>
-                              <Button onClick={() => handleSubmitTask(task.id)}>Resubmit Task</Button>
+                              <Button onClick={() => handleSubmitTask(task._id, task.batch)}>Resubmit Task</Button>
                             </DialogFooter>
                           </DialogContent>
                         </Dialog>
@@ -558,8 +745,24 @@ const Tasks = () => {
               {completedTasks.length > 0 ? (
                 completedTasks.map(task => (
                   <TaskCardUpdated 
-                    key={task.id} 
-                    task={task} 
+                    key={task._id} 
+                    task={{
+                      id: parseInt(task._id, 10),
+                      title: task.title,
+                      description: task.description,
+                      status: task.status,
+                      deadline: task.deadline || task.dueDate,
+                      submittedAt: task.submittedAt,
+                      feedback: task.feedback,
+                      rating: task.rating,
+                      points: task.points || 0,
+                      attachments: task.attachments?.map((attachment, index) => ({
+                        id: attachment.id ?? index + 1,
+                        name: attachment.name,
+                        size: attachment.size.toString(),
+                        url: attachment.url
+                      }))
+                    }}
                     actions={
                       <Button 
                         variant="outline" 

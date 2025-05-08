@@ -38,6 +38,8 @@ interface AdminDashboardData {
   pendingApprovals: number;
 }
 
+const apiUrl = import.meta.env.VITE_REACT_API_URL || "https://localhost:5000";
+
 const Dashboard = () => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -51,7 +53,7 @@ const Dashboard = () => {
   const fetchDashboardData = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`https://bootcamp-project-oll.onrender.com/api/dashboard/${user.role.toLowerCase()}`, {
+      const response = await fetch(`${apiUrl}/api/dashboard/${user.role.toLowerCase()}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },

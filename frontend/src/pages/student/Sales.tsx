@@ -49,6 +49,7 @@ interface FormData {
   customProduct: string;
 }
 
+const apiUrl = import.meta.env.VITE_REACT_API_URL || "https://localhost:5000";
 // Mock products for the add sale form
 const mockProducts = [
   { id: 1, name: 'Eco-friendly Notebook', price: 25 },
@@ -81,7 +82,7 @@ const Sales = () => {
       try {
         setLoading(true);
         const token = localStorage.getItem('token');
-        const response = await axios.get('https://bootcamp-project-oll.onrender.com/api/sales/my-sales', {
+        const response = await axios.get(`${apiUrl}/api/sales/my-sales`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setSales(response.data);
@@ -135,7 +136,7 @@ const Sales = () => {
       }
 
       const token = localStorage.getItem('token');
-      const response = await axios.post('https://bootcamp-project-oll.onrender.com/api/sales', {
+      const response = await axios.post(`${apiUrl}/api/sales`, {
         product,
         amount,
         customer: formData.customer,

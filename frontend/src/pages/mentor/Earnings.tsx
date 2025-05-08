@@ -29,6 +29,8 @@ import { DollarSign, TrendingUp, Calendar, BarChart3, PieChart as PieChartIcon, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
+const apiUrl = import.meta.env.VITE_REACT_API_URL || "https://localhost:5000";
+
 // Colors for the charts
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
@@ -49,7 +51,7 @@ const MentorEarnings = () => {
           throw new Error('Teacher ID not found in localStorage');
         }
 
-        const response = await axios.get(`https://bootcamp-project-oll.onrender.com/api/earnings/teacher/${teacherId}`);
+        const response = await axios.get(`${apiUrl}/api/earnings/teacher/${teacherId}`);
         setEarningsData(response.data);
         setError(null);
       } catch (err) {

@@ -72,6 +72,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+const apiUrl = import.meta.env.VITE_REACT_API_URL || "https://localhost:5000";
 const AdminStudents = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
@@ -120,8 +121,8 @@ const AdminStudents = () => {
     setLoading(true);
     try {
       const [studentsRes, batchesRes] = await Promise.all([
-        axios.get("https://bootcamp-project-oll.onrender.com/api/students"),
-        axios.get("https://bootcamp-project-oll.onrender.com/api/batches")
+        axios.get(`${apiUrl}/api/students`),
+        axios.get(`${apiUrl}/api/batches`)
       ]);
       
       setStudentsData(studentsRes.data);
@@ -165,7 +166,7 @@ const AdminStudents = () => {
         batches: data.batch ? [ batchNameToIdMap[data.batch] ] : []
       };
       
-      const response = await axios.post("https://bootcamp-project-oll.onrender.com/api/students", studentData);
+      const response = await axios.post(`${apiUrl}/api/students`, studentData);
       toast({
         title: "Student added",
         description: "New student has been successfully added"
@@ -227,7 +228,7 @@ const AdminStudents = () => {
       };
       
       const response = await axios.patch(
-        `https://bootcamp-project-oll.onrender.com/api/students/${currentStudent._id}`, 
+        `${apiUrl}/api/students/${currentStudent._id}`, 
         studentData
       );
       
@@ -262,7 +263,7 @@ const AdminStudents = () => {
     
     setIsSubmitting(true);
     try {
-      await axios.delete(`https://bootcamp-project-oll.onrender.com/api/students/${currentStudent._id}`);
+      await axios.delete(`${apiUrl}/api/students/${currentStudent._id}`);
       
       toast({
         title: "Student deleted",

@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -10,71 +9,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { CheckCircle, XCircle, MessageSquare, Search, Filter, Star, Image as ImageIcon } from 'lucide-react';
+import { CheckCircle, XCircle, MessageSquare, Search, Filter, Star, Image as ImageIcon, Loader2 } from 'lucide-react';
+import axios from 'axios';
 
-// Mock feedback data
-const feedbackData = [
-  {
-    id: 1,
-    studentName: "Alex Johnson",
-    studentId: "ST12345",
-    category: "Teacher",
-    subject: "Teaching Pace Too Fast",
-    message: "I'm finding it difficult to keep up with the pace of the lessons. Could we slow down a bit or have additional resources provided?",
-    date: "2025-04-10T09:30:00",
-    status: "pending",
-    imageUrl: null,
-    response: null
-  },
-  {
-    id: 2,
-    studentName: "Emma Martinez",
-    studentId: "ST12346",
-    category: "Content",
-    subject: "Missing Module Materials",
-    message: "The slides for Module 3 seem to be incomplete. The last few pages mentioned during the lecture are missing.",
-    date: "2025-04-08T14:15:00",
-    status: "resolved",
-    imageUrl: "https://example.com/screenshot1.jpg",
-    response: "Thank you for pointing this out. We've updated the materials with the missing slides. You can now access the complete module."
-  },
-  {
-    id: 3,
-    studentName: "David Wong",
-    studentId: "ST12347",
-    category: "Platform",
-    subject: "Video Playback Issues",
-    message: "I'm experiencing buffering issues when trying to watch the recorded sessions. The video keeps pausing every few seconds.",
-    date: "2025-04-05T11:20:00",
-    status: "in-progress",
-    imageUrl: "https://example.com/screenshot2.jpg",
-    response: null
-  },
-  {
-    id: 4,
-    studentName: "Sophia Chen",
-    studentId: "ST12348",
-    category: "Teacher",
-    subject: "Need More Practical Examples",
-    message: "The theoretical content is good, but I would benefit from more real-world examples and case studies to understand the application better.",
-    date: "2025-04-03T16:45:00",
-    status: "resolved",
-    imageUrl: null,
-    response: "We appreciate your feedback. We've added more practical examples to the upcoming classes and shared additional case studies in the resources section."
-  },
-  {
-    id: 5,
-    studentName: "Taylor Swift",
-    studentId: "ST12349",
-    category: "Content",
-    subject: "Suggestion for Additional Resources",
-    message: "Would it be possible to get a list of recommended books or articles for further reading on the topics covered in class?",
-    date: "2025-04-01T10:05:00",
-    status: "pending",
-    imageUrl: null,
-    response: null
-  }
-];
+const apiUrl = import.meta.env.VITE_REACT_API_URL || "https://localhost:5000";
 
 const AdminFeedback = () => {
   const [activeTab, setActiveTab] = useState('all');
@@ -85,16 +23,52 @@ const AdminFeedback = () => {
     status: 'all',
     date: 'all'
   });
-  const [selectedFeedback, setSelectedFeedback] = useState<typeof feedbackData[0] | null>(null);
+  const [selectedFeedback, setSelectedFeedback] = useState(null);
   const [replyText, setReplyText] = useState('');
-  const [feedbacks, setFeedbacks] = useState(feedbackData);
+  const [feedbacks, setFeedbacks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  // Fetch all feedbacks
+  useEffect(() => {
+    const fetchFeedbacks = async () => {
+      try {
+        setLoading(true);
+        const response = await axios.get(`${apiUrl}/api/feedback/feedback`);
+        
+        // Map the response data to match our component's expected structure
+        const mappedFeedbacks = response.data.map(item => ({
+          id: item._id,
+          studentName: item.student?.name || "Unknown Student", // In case student isn't fully populated
+          studentId: item.student?._id || item.student,
+          category: item.category,
+          subject: `Feedback from ${item.student?.name || "Student"}`, // Create a subject line
+          message: item.feedback,
+          date: item.createdAt,
+          status: item.status,
+          imageUrl: item.image ? `${apiUrl}${item.image}` : null,
+          response: item.reply || null
+        }));
+        
+        setFeedbacks(mappedFeedbacks);
+      } catch (err) {
+        console.error("Error fetching feedbacks:", err);
+        setError("Failed to load feedbacks. Please try again later.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFeedbacks();
+  }, []);
 
   // Filter feedbacks based on search term and filters
   const filteredFeedbacks = feedbacks.filter(feedback => {
     // Search term filter
     const matchesSearch = 
       feedback.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      feedback.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (feedback.subject && feedback.subject.toLowerCase().includes(searchTerm.toLowerCase())) ||
       feedback.message.toLowerCase().includes(searchTerm.toLowerCase());
     
     // Tab filter
@@ -105,35 +79,94 @@ const AdminFeedback = () => {
       (activeTab === 'resolved' && feedback.status === 'resolved');
     
     // Additional filters
-    const matchesCategory = selectedFilter.category === 'all' || feedback.category === selectedFilter.category;
+    const matchesCategory = selectedFilter.category === 'all' || feedback.category.toLowerCase() === selectedFilter.category.toLowerCase();
     const matchesStatus = selectedFilter.status === 'all' || feedback.status === selectedFilter.status;
     
-    // Date filter would be implemented here with actual date logic
-    const matchesDate = true; // Placeholder
+    // Date filter implementation
+    let matchesDate = true;
+    const feedbackDate = new Date(feedback.date);
+    const today = new Date();
+    
+    if (selectedFilter.date === 'today') {
+      matchesDate = feedbackDate.toDateString() === today.toDateString();
+    } else if (selectedFilter.date === 'this-week') {
+      const oneWeekAgo = new Date();
+      oneWeekAgo.setDate(today.getDate() - 7);
+      matchesDate = feedbackDate >= oneWeekAgo;
+    } else if (selectedFilter.date === 'this-month') {
+      const oneMonthAgo = new Date();
+      oneMonthAgo.setMonth(today.getMonth() - 1);
+      matchesDate = feedbackDate >= oneMonthAgo;
+    }
     
     return matchesSearch && matchesTab && matchesCategory && matchesStatus && matchesDate;
   });
 
-  const handleSendReply = () => {
-    if (!selectedFeedback || !replyText.trim()) return;
+  // Mark feedback as in-progress
+  const handleMarkInProgress = async () => {
+    if (!selectedFeedback) return;
     
-    // Update the feedback with the response
-    const updatedFeedbacks = feedbacks.map(feedback => 
-      feedback.id === selectedFeedback.id 
-        ? { 
-            ...feedback, 
-            status: 'resolved', 
-            response: replyText 
-          } 
-        : feedback
-    );
-    
-    setFeedbacks(updatedFeedbacks);
-    setSelectedFeedback(prev => prev ? {...prev, status: 'resolved', response: replyText} : null);
-    setReplyText('');
+    try {
+      setSubmitting(true);
+      
+      // Call API to update status
+      const response = await axios.patch(`${apiUrl}/api/feedback/feedback/${selectedFeedback.id}`, {
+        status: 'in-progress'
+      });
+      
+      // Update local state
+      const updatedFeedbacks = feedbacks.map(feedback => 
+        feedback.id === selectedFeedback.id 
+          ? { ...feedback, status: 'in-progress' } 
+          : feedback
+      );
+      
+      setFeedbacks(updatedFeedbacks);
+      setSelectedFeedback(prev => prev ? {...prev, status: 'in-progress'} : null);
+    } catch (err) {
+      console.error("Error updating feedback status:", err);
+      alert("Failed to update status. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const renderStatusBadge = (status: string) => {
+  // Send reply to feedback
+  const handleSendReply = async () => {
+    if (!selectedFeedback || !replyText.trim()) return;
+    
+    try {
+      setSubmitting(true);
+      
+      // Call API to update status and add reply
+      const response = await axios.patch(`${apiUrl}/api/feedback/feedback/${selectedFeedback.id}`, {
+        status: 'resolved',
+        reply: replyText
+      });
+      
+      // Update local state
+      const updatedFeedbacks = feedbacks.map(feedback => 
+        feedback.id === selectedFeedback.id 
+          ? { 
+              ...feedback, 
+              status: 'resolved', 
+              response: replyText 
+            } 
+          : feedback
+      );
+      
+      setFeedbacks(updatedFeedbacks);
+      setSelectedFeedback(prev => prev ? {...prev, status: 'resolved', response: replyText} : null);
+      setReplyText('');
+    } catch (err) {
+      console.error("Error sending reply:", err);
+      alert("Failed to send reply. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const renderStatusBadge = (status) => {
     switch (status) {
       case 'pending':
         return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Pending</Badge>;
@@ -145,6 +178,35 @@ const AdminFeedback = () => {
         return null;
     }
   };
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-2">Loading feedbacks...</span>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <Alert className="bg-red-50 border-red-200">
+        <XCircle className="h-4 w-4 text-red-600" />
+        <AlertDescription className="ml-2">
+          <p className="font-medium text-red-800">{error}</p>
+          <Button 
+            variant="outline" 
+            className="mt-2" 
+            onClick={() => window.location.reload()}
+          >
+            Try Again
+          </Button>
+        </AlertDescription>
+      </Alert>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -189,9 +251,9 @@ const AdminFeedback = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Categories</SelectItem>
-                    <SelectItem value="Teacher">Teacher</SelectItem>
-                    <SelectItem value="Content">Content</SelectItem>
-                    <SelectItem value="Platform">Platform</SelectItem>
+                    <SelectItem value="teacher">Teacher</SelectItem>
+                    <SelectItem value="content">Content</SelectItem>
+                    <SelectItem value="platform">Platform</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -280,7 +342,7 @@ const AdminFeedback = () => {
                     <div className="flex items-start justify-between">
                       <div className="flex gap-3 items-center">
                         <Avatar className="h-8 w-8">
-                          <AvatarImage src={`https://avatar.vercel.sh/${feedback.studentId}`} alt={feedback.studentName} />
+                          <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${feedback.studentName}`} alt={feedback.studentName} />
                           <AvatarFallback>{feedback.studentName.charAt(0)}</AvatarFallback>
                         </Avatar>
                         <div>
@@ -292,12 +354,12 @@ const AdminFeedback = () => {
                     </div>
                     
                     <div className="mt-2">
-                      <p className="text-sm font-medium truncate">{feedback.subject}</p>
+                      <p className="text-sm font-medium truncate">{feedback.subject || 'Feedback'}</p>
                       <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{feedback.message}</p>
                     </div>
                     
                     <div className="flex items-center mt-2 text-xs text-muted-foreground">
-                      <Badge variant="outline" className="bg-muted/50 hover:bg-muted/50">
+                      <Badge variant="outline" className="bg-muted/50 hover:bg-muted/50 capitalize">
                         {feedback.category}
                       </Badge>
                       {feedback.imageUrl && (
@@ -324,9 +386,9 @@ const AdminFeedback = () => {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle>{selectedFeedback.subject}</CardTitle>
+                    <CardTitle>{selectedFeedback.subject || 'Feedback'}</CardTitle>
                     <CardDescription>
-                      From {selectedFeedback.studentName} ({selectedFeedback.studentId}) • {new Date(selectedFeedback.date).toLocaleString()}
+                      From {selectedFeedback.studentName} • {new Date(selectedFeedback.date).toLocaleString()}
                     </CardDescription>
                   </div>
                   {renderStatusBadge(selectedFeedback.status)}
@@ -336,12 +398,12 @@ const AdminFeedback = () => {
                 <div className="p-4 border rounded-lg bg-muted/30">
                   <div className="flex gap-3">
                     <Avatar className="h-10 w-10">
-                      <AvatarImage src={`https://avatar.vercel.sh/${selectedFeedback.studentId}`} alt={selectedFeedback.studentName} />
+                      <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${selectedFeedback.studentName}`} alt={selectedFeedback.studentName} />
                       <AvatarFallback>{selectedFeedback.studentName.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div>
                       <p className="font-medium">{selectedFeedback.studentName}</p>
-                      <p className="text-sm text-muted-foreground">Category: {selectedFeedback.category}</p>
+                      <p className="text-sm text-muted-foreground capitalize">Category: {selectedFeedback.category}</p>
                     </div>
                   </div>
                   
@@ -356,6 +418,12 @@ const AdminFeedback = () => {
                         src={selectedFeedback.imageUrl} 
                         alt="Feedback attachment" 
                         className="max-w-full max-h-64 rounded-md border"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.onerror = null;
+                          target.src = "/placeholder-image.jpg"; // Fallback image path
+                          console.error("Error loading image:", selectedFeedback.imageUrl);
+                        }}
                       />
                     </div>
                   )}
@@ -381,26 +449,36 @@ const AdminFeedback = () => {
                       className="min-h-32"
                       value={replyText}
                       onChange={(e) => setReplyText(e.target.value)}
+                      disabled={submitting}
                     />
                     
                     <div className="flex justify-end mt-4 gap-2">
                       <Button 
                         variant="outline"
-                        onClick={() => {
-                          // Mark as in-progress without sending a reply
-                          const updatedFeedbacks = feedbacks.map(feedback => 
-                            feedback.id === selectedFeedback.id 
-                              ? { ...feedback, status: 'in-progress' } 
-                              : feedback
-                          );
-                          setFeedbacks(updatedFeedbacks);
-                          setSelectedFeedback(prev => prev ? {...prev, status: 'in-progress'} : null);
-                        }}
+                        onClick={handleMarkInProgress}
+                        disabled={selectedFeedback.status === 'in-progress' || selectedFeedback.status === 'resolved' || submitting}
                       >
-                        Mark as In Progress
+                        {submitting ? (
+                          <>
+                            <Loader2 size={16} className="mr-2 animate-spin" />
+                            Processing...
+                          </>
+                        ) : (
+                          'Mark as In Progress'
+                        )}
                       </Button>
-                      <Button onClick={handleSendReply}>
-                        Send Reply
+                      <Button 
+                        onClick={handleSendReply}
+                        disabled={!replyText.trim() || submitting}
+                      >
+                        {submitting ? (
+                          <>
+                            <Loader2 size={16} className="mr-2 animate-spin" />
+                            Sending...
+                          </>
+                        ) : (
+                          'Send Reply'
+                        )}
                       </Button>
                     </div>
                   </div>

@@ -55,6 +55,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { toast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
+const apiUrl = import.meta.env.VITE_REACT_API_URL || "https://localhost:5000";
 const AdminTeachers = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
@@ -106,7 +107,7 @@ const AdminTeachers = () => {
   const fetchTeachers = async () => {
     try {
       setLoading(true);
-      const res = await fetch("https://bootcamp-project-oll.onrender.com/api/teachers");
+      const res = await fetch(`${apiUrl}/api/teachers`);
       const data = await res.json();
       setTeachersData(data);
     } catch (err) {
@@ -127,7 +128,7 @@ const AdminTeachers = () => {
   
   const handleAddTeacher = async (data) => {
     try {
-      const response = await fetch("https://bootcamp-project-oll.onrender.com/api/teachers", {
+      const response = await fetch(`${apiUrl}/api/teachers`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -163,7 +164,7 @@ const AdminTeachers = () => {
 
   const handleEditTeacher = async (data) => {
     try {
-      const response = await fetch(`https://bootcamp-project-oll.onrender.com/api/teachers/${selectedTeacher._id}`, {
+      const response = await fetch(`${apiUrl}/api/teachers/${selectedTeacher._id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json"
@@ -198,7 +199,7 @@ const AdminTeachers = () => {
 
   const handleDeleteTeacher = async () => {
     try {
-      const response = await fetch(`https://bootcamp-project-oll.onrender.com/api/teachers/${selectedTeacher._id}`, {
+      const response = await fetch(`${apiUrl}/api/teachers/${selectedTeacher._id}`, {
         method: "DELETE"
       });
   

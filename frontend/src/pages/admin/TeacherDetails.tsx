@@ -25,6 +25,7 @@ import {
 import UserAvatar from "@/components/ui-custom/UserAvatar";
 import axios from "axios";
 
+const apiUrl = import.meta.env.VITE_REACT_API_URL || "https://localhost:5000";
 const AdminTeacherDetails = () => {
   const navigate = useNavigate();
   const { teacherId } = useParams();
@@ -59,12 +60,12 @@ const AdminTeacherDetails = () => {
      const fetchTeacherBatchAndStudent = async () => {
       try {
         setLoading(true);
-        const teacherResponse = await axios.get(`https://bootcamp-project-oll.onrender.com/api/teachers/${teacherId}`);
+        const teacherResponse = await axios.get(`${apiUrl}/api/teachers/${teacherId}`);
         setTeacherData(teacherResponse.data);
 
         const batchIds = teacherResponse.data.batches || [];
         const batchPromises = batchIds.map((batchId) =>
-          axios.get(`https://bootcamp-project-oll.onrender.com/api/batches/${batchId}`)
+          axios.get(`${apiUrl}/api/batches/${batchId}`)
         );
 
         const batchResponses = await Promise.all(batchPromises);
@@ -73,7 +74,7 @@ const AdminTeacherDetails = () => {
 
         const studentIds = teacherResponse.data.students || [];
         const studentPromises = studentIds.map((studentId) =>
-          axios.get(`https://bootcamp-project-oll.onrender.com/api/students/${studentId}`)
+          axios.get(`${apiUrl}/api/students/${studentId}`)
         );
         const studentResponses = await Promise.all(studentPromises);
         const fetchedStudents = studentResponses.map((response) => response.data);

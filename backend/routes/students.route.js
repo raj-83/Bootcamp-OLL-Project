@@ -195,6 +195,65 @@ router.patch("/:id", async (req, res) => {
   }
 });
 
+router.patch("/update/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Fields allowed to be updated
+    const allowedUpdates = ['name', 'email', 'phone', 'location', 'school', 'grade'];
+    const updates = {};
+
+    // Filter for allowed fields
+    Object.keys(req.body).forEach(key => {
+      if (allowedUpdates.includes(key)) {
+        updates[key] = req.body[key];
+      }
+    });
+
+    // If trying to update email, check if it's already in use
+    if (updates.email) {
+      const existingStudent = await Student.findOne({ 
+        email: updates.email,
+        _id: { $ne: id } // Exclude current student from check
+      });
+      
+      if (existingStudent) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Email is already in use' 
+        });
+      }
+    }
+
+    // Update the student with validated data
+    const updatedStudent = await Student.findByIdAndUpdate(
+      id,
+      { $set: updates },
+      { new: true, runValidators: true } // Return updated document and run schema validators
+    ).select('-password'); // Don't return password in response
+
+    if (!updatedStudent) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Student not found' 
+      });
+    }
+
+    res.status(200).json({ 
+      success: true, 
+      message: 'Profile updated successfully',
+      student: updatedStudent 
+    });
+  } catch (error) {
+    console.error('Error updating student profile:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error', 
+      error: error.message 
+    });
+  }
+})
+
 
 // Delete student
 router.delete("/:id", async (req, res) => {
