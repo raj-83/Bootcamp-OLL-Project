@@ -25,7 +25,7 @@ import {
   Line, 
   Legend 
 } from 'recharts';
-import { DollarSign, TrendingUp, Calendar, BarChart3, PieChart as PieChartIcon, Loader2 } from 'lucide-react';
+import { IndianRupee, TrendingUp, Calendar, BarChart3, PieChart as PieChartIcon, Loader2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
@@ -127,8 +127,8 @@ const MentorEarnings = () => {
           <CardHeader className="pb-2">
             <CardDescription>Total Earnings</CardDescription>
             <CardTitle className="text-3xl flex items-center">
-              <DollarSign className="mr-2 h-6 w-6 text-success" />
-              ${earningsData.totalEarnings.toFixed(2)}
+              <IndianRupee className="mr-2 h-6 w-6 text-success" />
+              ₹{earningsData.totalEarnings.toFixed(2)}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -142,8 +142,8 @@ const MentorEarnings = () => {
           <CardHeader className="pb-2">
             <CardDescription>Pending Earnings</CardDescription>
             <CardTitle className="text-3xl flex items-center">
-              <DollarSign className="mr-2 h-6 w-6 text-warning" />
-              ${earningsData.pendingEarnings.toFixed(2)}
+              <IndianRupee className="mr-2 h-6 w-6 text-warning" />
+              ₹{earningsData.pendingEarnings.toFixed(2)}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -158,7 +158,7 @@ const MentorEarnings = () => {
             <CardDescription>Last Month</CardDescription>
             <CardTitle className="text-3xl flex items-center">
               <Calendar className="mr-2 h-6 w-6 text-blue-500" />
-              ${earningsData.lastMonth.toFixed(2)}
+              ₹{earningsData.lastMonth.toFixed(2)}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -173,7 +173,7 @@ const MentorEarnings = () => {
             <CardDescription>Last Week</CardDescription>
             <CardTitle className="text-3xl flex items-center">
               <TrendingUp className="mr-2 h-6 w-6 text-primary" />
-              ${earningsData.lastWeek.toFixed(2)}
+              ₹{earningsData.lastWeek.toFixed(2)}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -361,11 +361,11 @@ const MentorEarnings = () => {
                       <TableCell className="font-medium">{batch.name}</TableCell>
                       <TableCell>{batch.studentCount}</TableCell>
                       <TableCell>
-                        ${batch.studentCount > 0 
+                        ₹{batch.studentCount > 0 
                           ? (batch.earnings / batch.studentCount).toFixed(2) 
                           : '0.00'}
                       </TableCell>
-                      <TableCell className="text-right font-medium">${batch.earnings.toFixed(2)}</TableCell>
+                      <TableCell className="text-right font-medium">₹{batch.earnings.toFixed(2)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -397,9 +397,9 @@ const MentorEarnings = () => {
                       <TableCell>{transaction.date}</TableCell>
                       <TableCell className="font-medium">{transaction.student}</TableCell>
                       <TableCell>{transaction.batch}</TableCell>
-                      <TableCell>${transaction.amount.toFixed(2)}</TableCell>
+                      <TableCell>₹{transaction.amount.toFixed(2)}</TableCell>
                       <TableCell className="text-right text-success font-medium">
-                        ${transaction.commission.toFixed(2)}
+                        ₹{transaction.commission.toFixed(2)}
                       </TableCell>
                     </TableRow>
                   ))}

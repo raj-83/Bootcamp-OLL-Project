@@ -213,7 +213,7 @@ const Profile = () => {
             <div className="flex items-center space-x-2">
               <Trophy className="w-4 h-4 text-gray-500" />
               <span className="font-medium">Earnings:</span>
-              <span>${profileData.earning}</span>
+              <span>₹{profileData.earning}</span>
             </div>
             <div className="flex items-center space-x-2">
               <Clock className="w-4 h-4 text-gray-500" />

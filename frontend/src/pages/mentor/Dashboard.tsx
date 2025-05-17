@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { DollarSign, Users, Calendar, ArrowRight, BarChart3, Clock } from 'lucide-react';
+import { IndianRupee, Users, Calendar, ArrowRight, BarChart3, Clock } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import axios from 'axios';
 
@@ -153,8 +153,8 @@ const MentorDashboard = () => {
           <CardHeader className="pb-2">
             <CardDescription>Total Earnings</CardDescription>
             <CardTitle className="text-3xl flex items-center">
-              <DollarSign className="mr-2 h-6 w-6 text-green-500" />
-              ${dashboardData.totalEarnings}
+              <IndianRupee className="mr-2 h-6 w-6 text-green-500" />
+              ₹{dashboardData.totalEarnings}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -266,7 +266,7 @@ const MentorDashboard = () => {
                       </span>
                     </TableCell>
                     <TableCell>{batch.students}</TableCell>
-                    <TableCell className="text-right">${batch.earnings}</TableCell>
+                    <TableCell className="text-right">₹{batch.earnings}</TableCell>
                     <TableCell>
                       <Button 
                         variant="ghost" 

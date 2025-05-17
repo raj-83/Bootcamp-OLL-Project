@@ -34,7 +34,7 @@ import {
   Cell
 } from 'recharts';
 import { 
-  DollarSign, 
+  IndianRupee, 
   CalendarDays, 
   Download, 
   Briefcase, 
@@ -162,11 +162,11 @@ const AdminEarnings = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold flex items-center">
-              <DollarSign className="h-5 w-5 text-success mr-1" />
-              ${totalEarningsData.totalEarnings}
+              <IndianRupee className="h-5 w-5 text-success mr-1" />
+              ₹{totalEarningsData.totalEarnings}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              20% commission from ${totalEarningsData.totalStudentSales} total sales
+              20% commission from ₹{totalEarningsData.totalStudentSales} total sales
             </p>
           </CardContent>
         </Card>
@@ -348,9 +348,9 @@ const AdminEarnings = () => {
                         </TableCell>
                         <TableCell>{batch.teacher}</TableCell>
                         <TableCell>{batch.students}</TableCell>
-                        <TableCell>${batch.totalSales}</TableCell>
-                        <TableCell>${batch.platformEarnings}</TableCell>
-                        <TableCell>${batch.teacherEarnings}</TableCell>
+                        <TableCell>₹{batch.totalSales}</TableCell>
+                        <TableCell>₹{batch.platformEarnings}</TableCell>
+                        <TableCell>₹{batch.teacherEarnings}</TableCell>
                       </TableRow>
                     ))
                   ) : (
@@ -424,7 +424,7 @@ const AdminEarnings = () => {
                         <TableCell>{teacher.specialization}</TableCell>
                         <TableCell>{teacher.batches}</TableCell>
                         <TableCell>{teacher.students}</TableCell>
-                        <TableCell>${teacher.earnings}</TableCell>
+                        <TableCell>₹{teacher.earnings}</TableCell>
                       </TableRow>
                     ))
                   ) : (

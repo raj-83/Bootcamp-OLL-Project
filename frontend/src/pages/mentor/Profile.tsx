@@ -358,7 +358,7 @@ const MentorProfile = () => {
                       <p className="text-xs text-muted-foreground">Current Batches</p>
                     </div>
                     <div className="p-4 bg-muted/20 rounded-lg text-center">
-                      <p className="text-lg font-bold">${profile.totalEarnings || 0}</p>
+                      <p className="text-lg font-bold">₹{profile.totalEarnings || 0}</p>
                       <p className="text-xs text-muted-foreground">Total Earnings</p>
                     </div>
                   </div>

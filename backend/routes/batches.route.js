@@ -1,11 +1,36 @@
-// backend/routes/batchRoutes.js
 import express from "express";
 import Batch from "../models/batch.model.js";
 import Teacher from "../models/teacher.model.js";
 import Student from "../models/student.model.js";
+import Sales from "../models/sales.model.js"; // Import Sales model
 // import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
+
+// Helper function to calculate real revenue for a batch
+const calculateBatchRevenue = async (batchId) => {
+  try {
+    // Get all students in the batch
+    const batch = await Batch.findById(batchId);
+    if (!batch || !batch.students || batch.students.length === 0) {
+      return 0;
+    }
+
+    // Find all sales made by students in this batch
+    const salesByBatchStudents = await Sales.find({
+      student: { $in: batch.students },
+      status: 'completed' // Only count completed sales
+    });
+
+    // Sum up the total sales amount
+    const totalRevenue = salesByBatchStudents.reduce((sum, sale) => sum + sale.amount, 0);
+
+    return totalRevenue;
+  } catch (error) {
+    console.error("Error calculating batch revenue:", error);
+    return 0;
+  }
+};
 
 // Create a new batch
 router.post("/", async (req, res) => {
@@ -60,20 +85,36 @@ router.post("/", async (req, res) => {
   }
 });
 
-// In your backend API route for fetching batches
-
-// Get all batches
+// Get all batches with real revenue calculation
 router.get("/", async (req, res) => {
   try {
-    const batches = await Batch.find();
-    res.status(200).json(batches);
+    // Fetch all batches and populate the students field
+    const batches = await Batch.find().populate('students', '_id');
+    
+    // Calculate real revenue for each batch
+const batchesWithRealRevenue = await Promise.all(
+  batches.map(async (batchDoc) => {
+    const realRevenue = await calculateBatchRevenue(batchDoc._id);
+
+    // Option A: document.save()
+    batchDoc.revenue = realRevenue;
+    await batchDoc.save();
+
+    // Option B: update query
+    // await Batch.findByIdAndUpdate(batchDoc._id, { revenue: realRevenue });
+
+    return batchDoc.toObject();
+  })
+);
+
+    res.status(200).json(batchesWithRealRevenue);
   } catch (error) {
     console.error("Failed to fetch batches:", error);
     res.status(500).json({ error: "Failed to fetch batches" });
   }
 });
 
-// Get a single batch by ID
+// Get a single batch by ID with real revenue
 router.get("/:id", async (req, res) => {
   try {
     const batch = await Batch.findById(req.params.id);
@@ -82,7 +123,14 @@ router.get("/:id", async (req, res) => {
       return res.status(404).json({ error: "Batch not found" });
     }
 
-    res.status(200).json(batch);
+    // Calculate real revenue for this batch
+    const realRevenue = await calculateBatchRevenue(batch._id);
+    
+    const batchObj = batch.toObject();
+    batchObj.defaultRevenue = batchObj.revenue; // Store original revenue
+    batchObj.revenue = realRevenue; // Update with real revenue
+
+    res.status(200).json(batchObj);
   } catch (error) {
     console.error("Failed to fetch batch:", error);
     res.status(500).json({ error: "Failed to fetch batch" });
@@ -178,16 +226,22 @@ router.put("/:id", async (req, res) => {
       );
     }
 
+    // Calculate real revenue for the updated batch
+    const realRevenue = await calculateBatchRevenue(batchId);
+    
+    const batchWithRealRevenue = updatedBatch.toObject();
+    batchWithRealRevenue.defaultRevenue = batchWithRealRevenue.revenue;
+    batchWithRealRevenue.revenue = realRevenue;
+
     res.status(200).json({
       message: "Batch updated successfully",
-      batch: updatedBatch,
+      batch: batchWithRealRevenue,
     });
   } catch (error) {
     console.error("Failed to update batch:", error);
     res.status(500).json({ error: "Failed to update batch" });
   }
 });
-
 
 router.delete("/:id", async (req, res) => {
   try {
@@ -247,10 +301,23 @@ router.get('/teacher/:teacherId', async (req, res) => {
     // Find all batches where the teacher field matches teacherId
     // Populate the students field to get student details
     const batches = await Batch.find({ teacher: teacherId })
-      .populate('students', 'firstName lastName email')
-      .sort({ startDate: -1 });
+      .populate('students', 'firstName lastName email');
 
-    res.status(200).json(batches);
+    // Calculate real revenue for each batch
+    const batchesWithRealRevenue = await Promise.all(
+      batches.map(async (batch) => {
+        const batchObj = batch.toObject();
+        const realRevenue = await calculateBatchRevenue(batch._id);
+        
+        return {
+          ...batchObj,
+          defaultRevenue: batchObj.revenue,
+          revenue: realRevenue
+        };
+      })
+    );
+
+    res.status(200).json(batchesWithRealRevenue);
   } catch (error) {
     console.error('Error fetching teacher batches:', error);
     res.status(500).json({ message: 'Server error', error: error.message });

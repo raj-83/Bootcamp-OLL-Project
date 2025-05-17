@@ -45,7 +45,7 @@ import {
   Mail,
   Phone,
   Briefcase,
-  DollarSign,
+  IndianRupee,
   Users,
   Star,
   School
@@ -353,13 +353,13 @@ const AdminTeachers = () => {
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Users className="h-4 w-4 text-muted-foreground" />
-                        <span>{teacher.batches.length || 0}</span>
+                        <span>{teacher.students.length || 0}</span>
                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center">
-                        <DollarSign className="h-4 w-4 mr-1 text-green-500" />
-                        ${teacher.totalEarnings || 0}
+                        <IndianRupee className="h-4 w-4 mr-1 text-green-500" />
+                        ₹{teacher.totalEarnings || 0}
                       </div>
                     </TableCell>
                     <TableCell>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, CheckCircle, Clock, DollarSign, Link, Plus, Star } from 'lucide-react';
+import { Calendar, CheckCircle, Clock, IndianRupee, Link, Plus, Star } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -176,8 +176,8 @@ console.log("Meeting Link", nextSession?.meetingLink);
         <CardContent>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <h2 className="text-3xl font-bold text-primary">${totalEarnings.toFixed(2)}</h2>
-              <p className="text-sm text-muted-foreground">Target: ${salesTarget.toFixed(2)}</p>
+              <h2 className="text-3xl font-bold text-primary">₹{totalEarnings.toFixed(2)}</h2>
+              <p className="text-sm text-muted-foreground">Target: ₹{salesTarget.toFixed(2)}</p>
               <div className="w-full max-w-[200px] mt-2">
                 <Progress value={(totalEarnings / salesTarget) * 100} className="h-2" />
               </div>

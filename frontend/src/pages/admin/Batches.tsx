@@ -57,7 +57,7 @@ import {
   Clock,
   Filter,
   MoreVertical,
-  DollarSign,
+  IndianRupee,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -536,20 +536,20 @@ const AdminBatches = () => {
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center">
-                            <DollarSign className="h-4 w-4 mr-2 text-success" />
-                            ${batch.revenue}
+                            <IndianRupee className="h-4 w-4 mr-2 text-success" />
+                            ₹{batch.revenue}
                           </div>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center">
-                            <DollarSign className="h-4 w-4 mr-2 text-blue-500" />
-                            ${(batch.revenue * 0.2).toFixed(2)}
+                            <IndianRupee className="h-4 w-4 mr-2 text-blue-500" />
+                            ₹{(batch.revenue * 0.2).toFixed(2)}
                           </div>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center">
-                            <DollarSign className="h-4 w-4 mr-2 text-purple-500" />
-                            ${(batch.revenue * 0.3).toFixed(2)}
+                            <IndianRupee className="h-4 w-4 mr-2 text-purple-500" />
+                            ₹{(batch.revenue * 0.3).toFixed(2)}
                           </div>
                         </TableCell>
                         <TableCell className="text-right">

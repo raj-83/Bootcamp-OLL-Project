@@ -34,7 +34,7 @@ import TaskSubmissionViewer from "@/components/mentor/TaskSubmissionViewer";
 import {
   Calendar,
   Clock,
-  DollarSign,
+  IndianRupee,
   Users,
   School,
   Check,
@@ -606,7 +606,7 @@ const BatchDetails = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-green-600 flex items-center">
-                  <DollarSign className="h-5 w-5 mr-1" />
+                  <IndianRupee className="h-5 w-5 mr-1" />
                   {revenueData.studentEarnings}
                 </div>
               </CardContent>
@@ -620,7 +620,7 @@ const BatchDetails = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-blue-600 flex items-center">
-                  <DollarSign className="h-5 w-5 mr-1" />
+                  <IndianRupee className="h-5 w-5 mr-1" />
                   {revenueData.teacherEarnings}
                 </div>
               </CardContent>
@@ -634,7 +634,7 @@ const BatchDetails = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-purple-600 flex items-center">
-                  <DollarSign className="h-5 w-5 mr-1" />
+                  <IndianRupee className="h-5 w-5 mr-1" />
                   {revenueData.ollShare}
                 </div>
               </CardContent>
@@ -648,7 +648,7 @@ const BatchDetails = () => {
               <div className="h-full bg-purple-500" style={{ width: "30%" }} />
             </div>
             <div className="flex justify-between mt-2 text-sm text-muted-foreground">
-              <span>Total Revenue: ${revenueData.total}</span>
+              <span>Total Revenue: ₹{revenueData.total}</span>
             </div>
           </div>
         </CardContent>
@@ -855,8 +855,8 @@ const BatchDetails = () => {
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center">
-                            <DollarSign className="h-4 w-4 mr-1 text-green-500" />
-                            ${student.earning || 0}
+                            <IndianRupee className="h-4 w-4 mr-1 text-green-500" />
+                            ₹{student.earning || 0}
                           </div>
                         </TableCell>
                         <TableCell>

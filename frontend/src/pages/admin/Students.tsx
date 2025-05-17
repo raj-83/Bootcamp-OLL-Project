@@ -44,7 +44,7 @@ import {
   Search, 
   Plus, 
   Filter, 
-  DollarSign, 
+  IndianRupee, 
   Briefcase, 
   MoreVertical,
   Edit,
@@ -490,8 +490,8 @@ const AdminStudents = () => {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center">
-                          <DollarSign className="h-4 w-4 mr-1 text-green-500" />
-                          ${student.earning || 0} {/* Changed to match schema (earning instead of earnings) */}
+                          <IndianRupee className="h-4 w-4 mr-1 text-green-500" />
+                          ₹{student.earning || 0} {/* Changed to match schema (earning instead of earnings) */}
                         </div>
                       </TableCell>
                       <TableCell className="text-right">

@@ -11,7 +11,7 @@ import {
   TableHeader, 
   TableRow 
 } from '@/components/ui/table';
-import { Search, Users, Calendar, DollarSign } from 'lucide-react';
+import { Search, Users, Calendar, IndianRupee } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import axios from 'axios';
 
@@ -211,9 +211,9 @@ const MentorBatches = () => {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <DollarSign className="h-5 w-5 text-muted-foreground" />
+                      <IndianRupee className="h-5 w-5 text-muted-foreground" />
                       <div>
-                        <div className="text-sm font-medium">${batch.earnings}</div>
+                        <div className="text-sm font-medium">₹{batch.earnings}</div>
                         <div className="text-xs text-muted-foreground">Earnings</div>
                       </div>
                     </div>

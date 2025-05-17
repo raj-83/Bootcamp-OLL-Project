@@ -187,7 +187,7 @@ const AdminTeacherDetails = () => {
                   <p className="text-sm text-muted-foreground">
                     Total Earnings
                   </p>
-                  <p className="font-medium">${teacherData.totalEarnings}</p>
+                  <p className="font-medium">₹{teacherData.totalEarnings}</p>
                 </div>
               </div>
 
@@ -367,7 +367,7 @@ const AdminTeacherDetails = () => {
                       </div>
                     </div>
                     <div className="font-medium text-green-600">
-                      ${earning.amount}
+                      ₹{earning.amount}
                     </div>
                   </div>
                 ))}
