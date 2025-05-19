@@ -71,6 +71,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 
 const apiUrl = import.meta.env.VITE_REACT_API_URL || "https://localhost:5000";
 const AdminStudents = () => {
@@ -92,25 +94,82 @@ const AdminStudents = () => {
   const [batchNameToIdMap, setBatchNameToIdMap] = useState({});
   const [batchIdToNameMap, setBatchIdToNameMap] = useState({});
 
-  // Form setup
+  // Add the form schema before the form setup
+  const studentFormSchema = z.object({
+    name: z.string()
+      .min(2, { message: "Name must be at least 2 characters long" })
+      .max(50, { message: "Name cannot exceed 50 characters" })
+      .regex(/^[a-zA-Z\s]*$/, { message: "Name can only contain letters and spaces" }),
+    email: z.string()
+      .email({ message: "Please enter a valid email address" })
+      .min(1, { message: "Email is required" }),
+    phone: z.string()
+      .min(10, { message: "Phone number must be at least 10 digits" })
+      .max(15, { message: "Phone number cannot exceed 15 digits" })
+      .regex(/^[0-9+\-\s()]*$/, { message: "Please enter a valid phone number" }),
+    batches: z.string()
+      .min(1, { message: "Please select a batch" }),
+    age: z.string()
+      .refine((val) => {
+        const num = parseInt(val);
+        return !isNaN(num) && num >= 5 && num <= 100;
+      }, { message: "Age must be between 5 and 100" }),
+    school: z.string()
+      .min(2, { message: "School name must be at least 2 characters long" })
+      .max(100, { message: "School name cannot exceed 100 characters" }),
+    password: z.string()
+      .min(8, { message: "Password must be at least 8 characters long" })
+      .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, {
+        message: "Password must contain at least one uppercase letter, one lowercase letter, and one number"
+      })
+  });
+
+  // Update the form setup with the schema
   const form = useForm({
+    resolver: zodResolver(studentFormSchema),
     defaultValues: {
       name: '',
       email: '',
       phone: '',
-      batches: [], // Changed from batch to batches to match schema
+      batches: '',
       age: '',
       school: '',
       password: ''
     }
   });
 
+  // Update the edit form schema and setup
+  const editStudentFormSchema = z.object({
+    name: z.string()
+      .min(2, { message: "Name must be at least 2 characters long" })
+      .max(50, { message: "Name cannot exceed 50 characters" })
+      .regex(/^[a-zA-Z\s]*$/, { message: "Name can only contain letters and spaces" }),
+    email: z.string()
+      .email({ message: "Please enter a valid email address" })
+      .min(1, { message: "Email is required" }),
+    phone: z.string()
+      .min(10, { message: "Phone number must be at least 10 digits" })
+      .max(15, { message: "Phone number cannot exceed 15 digits" })
+      .regex(/^[0-9+\-\s()]*$/, { message: "Please enter a valid phone number" }),
+    batch: z.string()
+      .min(1, { message: "Please select a batch" }),
+    age: z.string()
+      .refine((val) => {
+        const num = parseInt(val);
+        return !isNaN(num) && num >= 5 && num <= 100;
+      }, { message: "Age must be between 5 and 100" }),
+    school: z.string()
+      .min(2, { message: "School name must be at least 2 characters long" })
+      .max(100, { message: "School name cannot exceed 100 characters" })
+  });
+
   const editForm = useForm({
+    resolver: zodResolver(editStudentFormSchema),
     defaultValues: {
       name: '',
       email: '',
       phone: '',
-      batch: '', // Changed from batch to batches to match schema
+      batch: '',
       age: '',
       school: ''
     }

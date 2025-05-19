@@ -9,8 +9,49 @@ import { Upload, Mail, Phone, User, MapPin, Briefcase, Calendar, Shield, Edit, U
 import { Separator } from '@/components/ui/separator';
 import { toast } from '@/hooks/use-toast';
 import axios from 'axios';
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 
 const apiUrl = import.meta.env.VITE_REACT_API_URL || "https://localhost:5000";
+
+// Add the form schema
+const mentorProfileSchema = z.object({
+  name: z.string()
+    .min(2, { message: "Name must be at least 2 characters long" })
+    .max(50, { message: "Name cannot exceed 50 characters" })
+    .regex(/^[a-zA-Z\s]*$/, { message: "Name can only contain letters and spaces" }),
+  email: z.string()
+    .email({ message: "Please enter a valid email address" })
+    .min(1, { message: "Email is required" }),
+  phone: z.string()
+    .min(10, { message: "Phone number must be at least 10 digits" })
+    .max(15, { message: "Phone number cannot exceed 15 digits" })
+    .regex(/^[0-9+\-\s()]*$/, { message: "Please enter a valid phone number" }),
+  location: z.string()
+    .min(2, { message: "Location must be at least 2 characters long" })
+    .max(100, { message: "Location cannot exceed 100 characters" }),
+  bio: z.string()
+    .min(10, { message: "Bio must be at least 10 characters long" })
+    .max(500, { message: "Bio cannot exceed 500 characters" }),
+  jobTitle: z.string()
+    .min(2, { message: "Job title must be at least 2 characters long" })
+    .max(50, { message: "Job title cannot exceed 50 characters" }),
+  yearOfExp: z.number()
+    .min(0, { message: "Years of experience cannot be negative" })
+    .max(50, { message: "Years of experience cannot exceed 50" }),
+  specialization: z.string()
+    .min(2, { message: "Specialization must be at least 2 characters long" })
+    .max(100, { message: "Specialization cannot exceed 100 characters" })
+});
 
 const MentorProfile = () => {
   // Use State for profile data
@@ -27,10 +68,10 @@ const MentorProfile = () => {
     rating: 0,
     students: [],
     joiningDate: "",
-    status: "unknown", // Default value for status
-    totalBatches: 0, // Default value for totalBatches
-    currentBatches: 0, // Default value for currentBatches
-    totalEarnings: 0 // Default value for totalEarnings
+    status: "unknown",
+    totalBatches: 0,
+    currentBatches: 0,
+    totalEarnings: 0
   });
   
   // State for student data
@@ -41,8 +82,22 @@ const MentorProfile = () => {
   
   // Editing state
   const [isEditing, setIsEditing] = useState(false);
-  const [editedProfile, setEditedProfile] = useState({...profile});
-  
+
+  // Initialize form with Zod resolver
+  const form = useForm({
+    resolver: zodResolver(mentorProfileSchema),
+    defaultValues: {
+      name: "",
+      email: "",
+      phone: "",
+      location: "",
+      bio: "",
+      jobTitle: "",
+      yearOfExp: 0,
+      specialization: ""
+    }
+  });
+
   // Fetch teacher data on component mount
   useEffect(() => {
     const fetchData = async () => {
@@ -61,7 +116,18 @@ const MentorProfile = () => {
         const teacherData = teacherResponse.data;
         
         setProfile(teacherData);
-        setEditedProfile(teacherData);
+        
+        // Update form values
+        form.reset({
+          name: teacherData.name || "",
+          email: teacherData.email || "",
+          phone: teacherData.phone || "",
+          location: teacherData.location || "",
+          bio: teacherData.bio || "",
+          jobTitle: teacherData.jobTitle || "",
+          yearOfExp: teacherData.yearOfExp || 0,
+          specialization: teacherData.specialization || ""
+        });
         
         // Fetch student data for each student ID
         if (teacherData.students && teacherData.students.length > 0) {
@@ -90,30 +156,35 @@ const MentorProfile = () => {
     
     fetchData();
   }, []);
-  
-  // Handle input changes
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setEditedProfile({
-      ...editedProfile,
-      [name]: value
-    });
-  };
-  
+
   // Save changes
-  const handleSave = () => {
-    setProfile(editedProfile);
-    setIsEditing(false);
-    toast({
-      title: "Profile updated",
-      description: "Your profile has been successfully updated"
-    });
-  };
-  
-  // Cancel editing
-  const handleCancel = () => {
-    setEditedProfile({...profile});
-    setIsEditing(false);
+  const handleSave = async (data) => {
+    try {
+      const teacherId = localStorage.getItem('id');
+      if (!teacherId) {
+        throw new Error('Teacher ID not found in localStorage');
+      }
+
+      const response = await axios.put(`${apiUrl}/api/teachers/${teacherId}`, data);
+      
+      setProfile({
+        ...profile,
+        ...data
+      });
+      
+      setIsEditing(false);
+      toast({
+        title: "Profile updated",
+        description: "Your profile has been successfully updated"
+      });
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update profile. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
   
   // Display loading state
@@ -223,103 +294,147 @@ const MentorProfile = () => {
         <Card className="md:col-span-2">
           {isEditing ? (
             <CardContent className="p-6 space-y-6">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Full Name</Label>
-                  <Input 
-                    id="name"
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(handleSave)} className="space-y-4">
+                  <FormField
+                    control={form.control}
                     name="name"
-                    value={editedProfile.name}
-                    onChange={handleChange}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Full Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Enter your full name" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input 
-                      id="email"
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
                       name="email"
-                      type="email"
-                      value={editedProfile.email}
-                      onChange={handleChange}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email</FormLabel>
+                          <FormControl>
+                            <Input type="email" placeholder="Enter your email" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Phone</Label>
-                    <Input 
-                      id="phone"
+                    
+                    <FormField
+                      control={form.control}
                       name="phone"
-                      value={editedProfile.phone}
-                      onChange={handleChange}
-                    />
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="location">Location</Label>
-                  <Input 
-                    id="location"
-                    name="location"
-                    value={editedProfile.location}
-                    onChange={handleChange}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="jobTitle">Job Title</Label>
-                  <Input 
-                    id="jobTitle"
-                    name="jobTitle"
-                    value={editedProfile.jobTitle}
-                    onChange={handleChange}
-                  />
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="yearOfExp">Years of Experience</Label>
-                    <Input 
-                      id="yearOfExp"
-                      name="yearOfExp"
-                      type="number"
-                      value={editedProfile.yearOfExp}
-                      onChange={handleChange}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Phone</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter your phone number" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
                   </div>
                   
-                  <div className="space-y-2">
-                    <Label htmlFor="specialization">Specialization</Label>
-                    <Input 
-                      id="specialization"
+                  <FormField
+                    control={form.control}
+                    name="location"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Location</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Enter your location" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="bio"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Bio</FormLabel>
+                        <FormControl>
+                          <Textarea 
+                            placeholder="Tell us about yourself" 
+                            className="min-h-[100px]"
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="jobTitle"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Job Title</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter your job title" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
                       name="specialization"
-                      value={editedProfile.specialization}
-                      onChange={handleChange}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Specialization</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter your specialization" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
                   </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="bio">Bio</Label>
-                  <Textarea 
-                    id="bio"
-                    name="bio"
-                    value={editedProfile.bio}
-                    onChange={handleChange}
-                    rows={4}
+                  
+                  <FormField
+                    control={form.control}
+                    name="yearOfExp"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Years of Experience</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            placeholder="Enter years of experience"
+                            {...field}
+                            onChange={(e) => field.onChange(Number(e.target.value))}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
-                </div>
-              </div>
-              
-              <div className="flex justify-end space-x-3">
-                <Button variant="outline" onClick={handleCancel}>
-                  Cancel
-                </Button>
-                <Button onClick={handleSave}>
-                  Save Changes
-                </Button>
-              </div>
+                  
+                  <div className="flex justify-end space-x-2">
+                    <Button 
+                      variant="outline" 
+                      type="button" 
+                      onClick={() => setIsEditing(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button type="submit">
+                      Save Changes
+                    </Button>
+                  </div>
+                </form>
+              </Form>
             </CardContent>
           ) : (
             <>

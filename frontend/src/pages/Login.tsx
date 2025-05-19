@@ -8,6 +8,66 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Lock, Mail, User, School } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+
+// Define the user type enum
+const UserType = {
+  STUDENT: "student",
+  MENTOR: "mentor",
+  ADMIN: "admin"
+} as const;
+
+type UserType = typeof UserType[keyof typeof UserType];
+
+// Add the form schema
+const registerFormSchema = z.object({
+  name: z.string()
+    .min(2, { message: "Name must be at least 2 characters long" })
+    .max(50, { message: "Name cannot exceed 50 characters" })
+    .regex(/^[a-zA-Z\s]*$/, { message: "Name can only contain letters and spaces" }),
+  email: z.string()
+    .email({ message: "Please enter a valid email address" })
+    .min(1, { message: "Email is required" }),
+  phone: z.string()
+    .min(10, { message: "Phone number must be at least 10 digits" })
+    .max(15, { message: "Phone number cannot exceed 15 digits" })
+    .regex(/^[0-9+\-\s()]*$/, { message: "Please enter a valid phone number" }),
+  password: z.string()
+    .min(8, { message: "Password must be at least 8 characters long" })
+    .regex(/[A-Z]/, { message: "Password must contain at least one uppercase letter" })
+    .regex(/[a-z]/, { message: "Password must contain at least one lowercase letter" })
+    .regex(/[0-9]/, { message: "Password must contain at least one number" }),
+  confirmPassword: z.string()
+    .min(1, { message: "Please confirm your password" }),
+  school: z.string()
+    .min(2, { message: "School name must be at least 2 characters long" })
+    .max(100, { message: "School name cannot exceed 100 characters" })
+    .optional(),
+  userType: z.enum([UserType.STUDENT, UserType.MENTOR, UserType.ADMIN])
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords do not match",
+  path: ["confirmPassword"]
+}).refine((data) => {
+  if (data.userType === UserType.STUDENT) {
+    return !!data.school;
+  }
+  return true;
+}, {
+  message: "School name is required for students",
+  path: ["school"]
+});
+
+type RegisterFormData = z.infer<typeof registerFormSchema>;
 
 const Login = () => {
   const navigate = useNavigate();
@@ -20,15 +80,20 @@ const Login = () => {
   // Login form state
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
-  
-  // Register form state
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [phone, setPhone] = useState("");
-  const [school, setSchool] = useState("");
-  const [userType, setUserType] = useState<"student" | "mentor" | "admin">("student");
+
+  // Initialize register form with Zod resolver
+  const registerForm = useForm<RegisterFormData>({
+    resolver: zodResolver(registerFormSchema),
+    defaultValues: {
+      name: "",
+      email: "",
+      phone: "",
+      password: "",
+      confirmPassword: "",
+      school: "",
+      userType: UserType.STUDENT
+    }
+  });
   
   // Check URL parameters for tab selection
   useEffect(() => {
@@ -79,38 +144,18 @@ const Login = () => {
     }
   };
   
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleRegister = async (data: RegisterFormData) => {
     setIsLoading(true);
     
     try {
-      // Basic validation
-      if (!name || !email || !password || !confirmPassword || !phone) {
-        toast({
-          title: "Error",
-          description: "Please fill in all required fields",
-          variant: "destructive"
-        });
-        return;
-      }
-      
-      if (password !== confirmPassword) {
-        toast({
-          title: "Error",
-          description: "Passwords do not match",
-          variant: "destructive"
-        });
-        return;
-      }
-
       // Call register from auth context
       await register({
-        name,
-        email,
-        password,
-        phone,
-        role: userType,
-        school: userType === 'student' ? school : undefined,
+        name: data.name,
+        email: data.email,
+        password: data.password,
+        phone: data.phone,
+        role: data.userType,
+        school: data.userType === UserType.STUDENT ? data.school : undefined,
       });
       
       toast({
@@ -200,131 +245,180 @@ const Login = () => {
             </TabsContent>
             
             <TabsContent value="register">
-              <form onSubmit={handleRegister} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Full Name</Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      id="name"
-                      type="text"
-                      placeholder="John Smith"
-                      className="pl-10"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      disabled={isLoading}
+              <Form {...registerForm}>
+                <form onSubmit={registerForm.handleSubmit(handleRegister)} className="space-y-4">
+                  <FormField
+                    control={registerForm.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Full Name</FormLabel>
+                        <div className="relative">
+                          <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <FormControl>
+                            <Input 
+                              placeholder="John Smith"
+                              className="pl-10"
+                              disabled={isLoading}
+                              {...field}
+                            />
+                          </FormControl>
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={registerForm.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <div className="relative">
+                          <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <FormControl>
+                            <Input 
+                              type="email"
+                              placeholder="your.email@example.com"
+                              className="pl-10"
+                              disabled={isLoading}
+                              {...field}
+                            />
+                          </FormControl>
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={registerForm.control}
+                    name="phone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Phone Number</FormLabel>
+                        <div className="relative">
+                          <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <FormControl>
+                            <Input 
+                              type="tel"
+                              placeholder="(123) 456-7890"
+                              className="pl-10"
+                              disabled={isLoading}
+                              {...field}
+                            />
+                          </FormControl>
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <FormField
+                      control={registerForm.control}
+                      name="password"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Password</FormLabel>
+                          <div className="relative">
+                            <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                            <FormControl>
+                              <Input 
+                                type="password"
+                                className="pl-10"
+                                disabled={isLoading}
+                                {...field}
+                              />
+                            </FormControl>
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="registerEmail">Email</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      id="registerEmail"
-                      type="email"
-                      placeholder="your.email@example.com"
-                      className="pl-10"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      disabled={isLoading}
+                    
+                    <FormField
+                      control={registerForm.control}
+                      name="confirmPassword"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Confirm Password</FormLabel>
+                          <div className="relative">
+                            <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                            <FormControl>
+                              <Input 
+                                type="password"
+                                className="pl-10"
+                                disabled={isLoading}
+                                {...field}
+                              />
+                            </FormControl>
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      id="phone"
-                      type="tel"
-                      placeholder="(123) 456-7890"
-                      className="pl-10"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      disabled={isLoading}
-                    />
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="registerPassword">Password</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input 
-                        id="registerPassword"
-                        type="password"
-                        className="pl-10"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        disabled={isLoading}
-                      />
-                    </div>
                   </div>
                   
-                  <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">Confirm Password</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input 
-                        id="confirmPassword"
-                        type="password"
-                        className="pl-10"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        disabled={isLoading}
-                      />
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="school">School Name (For Students)</Label>
-                  <div className="relative">
-                    <School className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      id="school"
-                      type="text"
-                      placeholder="Your School Name"
-                      className="pl-10"
-                      value={school}
-                      onChange={(e) => setSchool(e.target.value)}
-                      disabled={isLoading || userType !== 'student'}
-                    />
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label>Account Type</Label>
-                  <div className="flex gap-4">
-                    <Button 
-                      type="button" 
-                      variant={userType === "student" ? "default" : "outline"}
-                      onClick={() => setUserType("student")}
-                      className="flex-1"
-                      disabled={isLoading}
-                    >
-                      Student
-                    </Button>
-                    <Button 
-                      type="button" 
-                      variant={userType === "mentor" ? "default" : "outline"}
-                      onClick={() => setUserType("mentor")}
-                      className="flex-1"
-                      disabled={isLoading}
-                    >
-                      Mentor
-                    </Button>
-                  </div>
-                </div>
-                
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? "Creating Account..." : "Create Account"}
-                </Button>
-              </form>
+                  <FormField
+                    control={registerForm.control}
+                    name="school"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>School Name (For Students)</FormLabel>
+                        <div className="relative">
+                          <School className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <FormControl>
+                            <Input 
+                              placeholder="Your School Name"
+                              className="pl-10"
+                              disabled={isLoading || registerForm.watch("userType") !== UserType.STUDENT}
+                              {...field}
+                            />
+                          </FormControl>
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={registerForm.control}
+                    name="userType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Account Type</FormLabel>
+                        <div className="flex gap-4">
+                          <Button 
+                            type="button" 
+                            variant={field.value === UserType.STUDENT ? "default" : "outline"}
+                            onClick={() => field.onChange(UserType.STUDENT)}
+                            className="flex-1"
+                            disabled={isLoading}
+                          >
+                            Student
+                          </Button>
+                          <Button 
+                            type="button" 
+                            variant={field.value === UserType.MENTOR ? "default" : "outline"}
+                            onClick={() => field.onChange(UserType.MENTOR)}
+                            className="flex-1"
+                            disabled={isLoading}
+                          >
+                            Mentor
+                          </Button>
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading ? "Creating Account..." : "Create Account"}
+                  </Button>
+                </form>
+              </Form>
             </TabsContent>
           </CardContent>
         </Tabs>

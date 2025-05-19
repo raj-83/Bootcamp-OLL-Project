@@ -54,6 +54,8 @@ import UserAvatar from '@/components/ui-custom/UserAvatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { toast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 
 const apiUrl = import.meta.env.VITE_REACT_API_URL || "https://localhost:5000";
 const AdminTeachers = () => {
@@ -84,7 +86,31 @@ const AdminTeachers = () => {
   ]);
   const [loading, setLoading] = useState(true);
 
+  // Add the form schema before the form setup
+  const teacherFormSchema = z.object({
+    name: z.string()
+      .min(2, { message: "Name must be at least 2 characters long" })
+      .max(50, { message: "Name cannot exceed 50 characters" })
+      .regex(/^[a-zA-Z\s]*$/, { message: "Name can only contain letters and spaces" }),
+    email: z.string()
+      .email({ message: "Please enter a valid email address" })
+      .min(1, { message: "Email is required" }),
+    phone: z.string()
+      .min(10, { message: "Phone number must be at least 10 digits" })
+      .max(15, { message: "Phone number cannot exceed 15 digits" })
+      .regex(/^[0-9+\-\s()]*$/, { message: "Please enter a valid phone number" }),
+    specialization: z.string()
+      .min(2, { message: "Specialization must be at least 2 characters long" })
+      .max(100, { message: "Specialization cannot exceed 100 characters" }),
+    status: z.enum(['active', 'inactive'], {
+      required_error: "Please select a status",
+      invalid_type_error: "Status must be either active or inactive"
+    })
+  });
+
+  // Update the add form setup with the schema
   const addForm = useForm({
+    resolver: zodResolver(teacherFormSchema),
     defaultValues: {
       name: '',
       email: '',
@@ -94,7 +120,30 @@ const AdminTeachers = () => {
     }
   });
 
+  // Update the edit form schema and setup
+  const editTeacherFormSchema = z.object({
+    name: z.string()
+      .min(2, { message: "Name must be at least 2 characters long" })
+      .max(50, { message: "Name cannot exceed 50 characters" })
+      .regex(/^[a-zA-Z\s]*$/, { message: "Name can only contain letters and spaces" }),
+    email: z.string()
+      .email({ message: "Please enter a valid email address" })
+      .min(1, { message: "Email is required" }),
+    phone: z.string()
+      .min(10, { message: "Phone number must be at least 10 digits" })
+      .max(15, { message: "Phone number cannot exceed 15 digits" })
+      .regex(/^[0-9+\-\s()]*$/, { message: "Please enter a valid phone number" }),
+    specialization: z.string()
+      .min(2, { message: "Specialization must be at least 2 characters long" })
+      .max(100, { message: "Specialization cannot exceed 100 characters" }),
+    status: z.enum(['active', 'inactive'], {
+      required_error: "Please select a status",
+      invalid_type_error: "Status must be either active or inactive"
+    })
+  });
+
   const editForm = useForm({
+    resolver: zodResolver(editTeacherFormSchema),
     defaultValues: {
       name: '',
       email: '',

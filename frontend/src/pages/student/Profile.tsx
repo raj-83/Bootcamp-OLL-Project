@@ -22,6 +22,17 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 
 interface StudentProfile {
   _id: string;
@@ -43,19 +54,48 @@ interface StudentProfile {
 
 const apiUrl = import.meta.env.VITE_REACT_API_URL || "https://localhost:5000";
 
+// Add the form schema
+const profileFormSchema = z.object({
+  name: z.string()
+    .min(2, { message: "Name must be at least 2 characters long" })
+    .max(50, { message: "Name cannot exceed 50 characters" })
+    .regex(/^[a-zA-Z\s]*$/, { message: "Name can only contain letters and spaces" }),
+  email: z.string()
+    .email({ message: "Please enter a valid email address" })
+    .min(1, { message: "Email is required" }),
+  phone: z.string()
+    .min(10, { message: "Phone number must be at least 10 digits" })
+    .max(15, { message: "Phone number cannot exceed 15 digits" })
+    .regex(/^[0-9+\-\s()]*$/, { message: "Please enter a valid phone number" }),
+  location: z.string()
+    .min(2, { message: "Location must be at least 2 characters long" })
+    .max(100, { message: "Location cannot exceed 100 characters" }),
+  school: z.string()
+    .min(2, { message: "School name must be at least 2 characters long" })
+    .max(100, { message: "School name cannot exceed 100 characters" }),
+  grade: z.string()
+    .min(1, { message: "Grade is required" })
+    .max(20, { message: "Grade cannot exceed 20 characters" })
+});
+
 const Profile = () => {
   const { user } = useAuth();
   const [profileData, setProfileData] = useState<StudentProfile | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editedProfile, setEditedProfile] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    location: '',
-    school: '',
-    grade: ''
-  });
   const [isLoading, setIsLoading] = useState(true);
+
+  // Initialize form with Zod resolver
+  const form = useForm({
+    resolver: zodResolver(profileFormSchema),
+    defaultValues: {
+      name: "",
+      email: "",
+      phone: "",
+      location: "",
+      school: "",
+      grade: ""
+    }
+  });
 
   useEffect(() => {
     const fetchStudentProfile = async () => {
@@ -72,7 +112,9 @@ const Profile = () => {
         
         const data = await response.json();
         setProfileData(data);
-        setEditedProfile({
+        
+        // Set form values when profile data is loaded
+        form.reset({
           name: data.name,
           email: data.email,
           phone: data.phone,
@@ -97,15 +139,7 @@ const Profile = () => {
     }
   }, [user]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setEditedProfile(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const handleSaveProfile = async () => {
+  const handleSaveProfile = async (data) => {
     try {
       const response = await fetch(`${apiUrl}/api/students/update/${user?._id}`, {
         method: 'PATCH',
@@ -113,7 +147,7 @@ const Profile = () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify(editedProfile)
+        body: JSON.stringify(data)
       });
 
       if (!response.ok) {
@@ -245,71 +279,107 @@ const Profile = () => {
               Update your profile information
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
-              <Input
-                id="name"
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleSaveProfile)} className="space-y-4">
+              <FormField
+                control={form.control}
                 name="name"
-                value={editedProfile.name}
-                onChange={handleInputChange}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter your name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
+
+              <FormField
+                control={form.control}
                 name="email"
-                type="email"
-                value={editedProfile.email}
-                onChange={handleInputChange}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input type="email" placeholder="Enter your email" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="phone">Phone</Label>
-              <Input
-                id="phone"
+
+              <FormField
+                control={form.control}
                 name="phone"
-                value={editedProfile.phone}
-                onChange={handleInputChange}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Phone</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter your phone number" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="location">Location</Label>
-              <Input
-                id="location"
+
+              <FormField
+                control={form.control}
                 name="location"
-                value={editedProfile.location}
-                onChange={handleInputChange}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Location</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter your location" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="school">School</Label>
-              <Input
-                id="school"
+
+              <FormField
+                control={form.control}
                 name="school"
-                value={editedProfile.school}
-                onChange={handleInputChange}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>School</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter your school name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="grade">Grade</Label>
-              <Input
-                id="grade"
+
+              <FormField
+                control={form.control}
                 name="grade"
-                value={editedProfile.grade}
-                onChange={handleInputChange}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Grade</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter your grade" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSaveProfile}>
-              Save Changes
-            </Button>
-          </DialogFooter>
+
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  type="button"
+                  onClick={() => {
+                    form.reset();
+                    setIsEditModalOpen(false);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit">Save Changes</Button>
+              </DialogFooter>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
     </div>

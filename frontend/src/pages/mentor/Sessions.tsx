@@ -47,10 +47,49 @@ import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import axios from "axios";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 
 const API_URL =
   import.meta.env.VITE_REACT_API_URL ||
   "https://bootcamp-project-oll.onrender.com";
+
+// Add the session form schema
+const sessionFormSchema = z.object({
+  title: z.string()
+    .min(3, { message: "Title must be at least 3 characters long" })
+    .max(100, { message: "Title cannot exceed 100 characters" }),
+  batch: z.string()
+    .min(1, { message: "Please select a batch" }),
+  date: z.string()
+    .min(1, { message: "Date is required" })
+    .refine((date) => {
+      const selectedDate = new Date(date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return selectedDate >= today;
+    }, { message: "Session date cannot be in the past" }),
+  time: z.string()
+    .min(1, { message: "Time is required" })
+    .regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9] (AM|PM) - ([0-1]?[0-9]|2[0-3]):[0-5][0-9] (AM|PM)$/, 
+      { message: "Time must be in format: HH:MM AM/PM - HH:MM AM/PM" }),
+  notes: z.string()
+    .min(10, { message: "Notes must be at least 10 characters long" })
+    .max(500, { message: "Notes cannot exceed 500 characters" }),
+  meetingLink: z.string()
+    .url({ message: "Please enter a valid URL" })
+    .optional()
+    .or(z.literal(""))
+});
 
 const Sessions = () => {
   const [sessions, setSessions] = useState([]);
@@ -73,6 +112,19 @@ const [loadingAttendance, setLoadingAttendance] = useState(false);
     meetingLink: "",
   });
   const [editMode, setEditMode] = useState(false);
+
+  // Initialize form with Zod resolver
+  const form = useForm({
+    resolver: zodResolver(sessionFormSchema),
+    defaultValues: {
+      title: "",
+      batch: "",
+      date: format(new Date(), "yyyy-MM-dd"),
+      time: "",
+      notes: "",
+      meetingLink: ""
+    }
+  });
 
   useEffect(() => {
     fetchData();
@@ -146,35 +198,19 @@ const [loadingAttendance, setLoadingAttendance] = useState(false);
     }
   };
 
-  const handleCreateSession = async () => {
-    // Validate form
-    if (
-      !newSession.title ||
-      !newSession.batch ||
-      !newSession.date ||
-      !newSession.time ||
-      !newSession.notes
-    ) {
-      toast({
-        title: "Missing fields",
-        description: "Please fill all required fields",
-        variant: "destructive",
-      });
-      return;
-    }
-
+  const handleCreateSession = async (data) => {
     try {
       if (editMode && selectedSession) {
         // Update existing session
         const response = await axios.put(
           `${API_URL}/api/sessions/${selectedSession._id}`,
-          newSession
+          data
         );
 
         // Update local state
         const updatedSessions = sessions.map((session) =>
           session._id === selectedSession._id
-            ? { ...session, status: "completed" }
+            ? { ...session, ...data }
             : session
         );
         setSessions(updatedSessions);
@@ -187,7 +223,7 @@ const [loadingAttendance, setLoadingAttendance] = useState(false);
         // Create new session
         const response = await axios.post(
           `${API_URL}/api/sessions`,
-          newSession
+          data
         );
         setSessions([...sessions, response.data.session]);
 
@@ -198,13 +234,13 @@ const [loadingAttendance, setLoadingAttendance] = useState(false);
       }
 
       // Reset form and close dialog
-      setNewSession({
+      form.reset({
         title: "",
         batch: "",
         date: format(new Date(), "yyyy-MM-dd"),
         time: "",
         notes: "",
-        meetingLink: "",
+        meetingLink: ""
       });
       setShowSessionDialog(false);
       setEditMode(false);
@@ -225,13 +261,13 @@ const [loadingAttendance, setLoadingAttendance] = useState(false);
 
   const handleEditSession = (session) => {
     setSelectedSession(session);
-    setNewSession({
+    form.reset({
       title: session.title,
       batch: session.batch._id || session.batch,
       date: format(new Date(session.date), "yyyy-MM-dd"),
       time: session.time,
       notes: session.notes || "",
-      meetingLink: session.meetingLink || "",
+      meetingLink: session.meetingLink || ""
     });
     setEditMode(true);
     setShowSessionDialog(true);
@@ -385,13 +421,13 @@ const [loadingAttendance, setLoadingAttendance] = useState(false);
           onClick={() => {
             setEditMode(false);
             setSelectedSession(null);
-            setNewSession({
+            form.reset({
               title: "",
               batch: "",
               date: format(new Date(), "yyyy-MM-dd"),
               time: "",
               notes: "",
-              meetingLink: "",
+              meetingLink: ""
             });
             setShowSessionDialog(true);
           }}
@@ -707,105 +743,128 @@ const [loadingAttendance, setLoadingAttendance] = useState(false);
                 : "Fill in the details for the new session"}
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="title" className="text-right">
-                Title
-              </Label>
-              <Input
-                id="title"
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleCreateSession)} className="space-y-4">
+              <FormField
+                control={form.control}
                 name="title"
-                value={newSession.title}
-                onChange={handleNewSessionChange}
-                className="col-span-3"
-                placeholder="Session title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Title</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Session title" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="batch" className="text-right">
-                Batch
-              </Label>
-              <Select
-                value={newSession.batch}
-                onValueChange={handleBatchChange}
-              >
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Select a batch" />
-                </SelectTrigger>
-                <SelectContent>
-                  {batches.map((batch) => (
-                    <SelectItem key={batch._id} value={batch._id}>
-                      {batch.batchName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="date" className="text-right">
-                Date
-              </Label>
-              <Input
-                id="date"
+
+              <FormField
+                control={form.control}
+                name="batch"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Batch</FormLabel>
+                    <Select
+                      value={field.value}
+                      onValueChange={field.onChange}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a batch" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {batches.map((batch) => (
+                          <SelectItem key={batch._id} value={batch._id}>
+                            {batch.batchName}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
                 name="date"
-                type="date"
-                value={newSession.date}
-                onChange={handleNewSessionChange}
-                className="col-span-3"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Date</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="time" className="text-right">
-                Time
-              </Label>
-              <Input
-                id="time"
+
+              <FormField
+                control={form.control}
                 name="time"
-                value={newSession.time}
-                onChange={handleNewSessionChange}
-                className="col-span-3"
-                placeholder="e.g., 10:00 AM - 11:30 AM"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Time</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="e.g., 10:00 AM - 11:30 AM" 
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="notes" className="text-right">
-                Notes
-              </Label>
-              <Textarea
-                id="notes"
+
+              <FormField
+                control={form.control}
                 name="notes"
-                value={newSession.notes}
-                onChange={handleNewSessionChange}
-                className="col-span-3"
-                placeholder="Session details and agenda"
-                rows={3}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Notes</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Session details and agenda"
+                        className="min-h-[100px]"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="meetingLink" className="text-right">
-                Meeting Link
-              </Label>
-              <Input
-                id="meetingLink"
+
+              <FormField
+                control={form.control}
                 name="meetingLink"
-                value={newSession.meetingLink}
-                onChange={handleNewSessionChange}
-                className="col-span-3"
-                placeholder="https://meet.google.com/xxx-xxxx-xxx or Zoom link"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Meeting Link</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="https://meet.google.com/xxx-xxxx-xxx or Zoom link"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowSessionDialog(false)}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleCreateSession}>
-              {editMode ? "Update Session" : "Create Session"}
-            </Button>
-          </DialogFooter>
+
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  type="button"
+                  onClick={() => setShowSessionDialog(false)}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit">
+                  {editMode ? "Update Session" : "Create Session"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
 

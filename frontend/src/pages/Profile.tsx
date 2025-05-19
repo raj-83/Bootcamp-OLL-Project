@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { 
   User, 
@@ -21,6 +20,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 
 // Mock data
 const profileData = {
@@ -53,30 +63,58 @@ const profileData = {
 
 const Profile = () => {
   const [isEditing, setIsEditing] = useState(false);
-  const [editedProfile, setEditedProfile] = useState({
-    name: profileData.name,
-    email: profileData.email,
-    phone: profileData.phone,
-    location: profileData.location,
-    school: profileData.school,
-    grade: profileData.grade
+
+  // Add the form schema
+  const profileFormSchema = z.object({
+    name: z.string()
+      .min(2, { message: "Name must be at least 2 characters long" })
+      .max(50, { message: "Name cannot exceed 50 characters" })
+      .regex(/^[a-zA-Z\s]*$/, { message: "Name can only contain letters and spaces" }),
+    email: z.string()
+      .email({ message: "Please enter a valid email address" })
+      .min(1, { message: "Email is required" }),
+    phone: z.string()
+      .min(10, { message: "Phone number must be at least 10 digits" })
+      .max(15, { message: "Phone number cannot exceed 15 digits" })
+      .regex(/^[0-9+\-\s()]*$/, { message: "Please enter a valid phone number" }),
+    location: z.string()
+      .min(2, { message: "Location must be at least 2 characters long" })
+      .max(100, { message: "Location cannot exceed 100 characters" }),
+    school: z.string()
+      .min(2, { message: "School name must be at least 2 characters long" })
+      .max(100, { message: "School name cannot exceed 100 characters" }),
+    grade: z.string()
+      .min(1, { message: "Grade is required" })
+      .max(20, { message: "Grade cannot exceed 20 characters" })
   });
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setEditedProfile(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
+  const form = useForm({
+    resolver: zodResolver(profileFormSchema),
+    defaultValues: {
+      name: profileData.name,
+      email: profileData.email,
+      phone: profileData.phone,
+      location: profileData.location,
+      school: profileData.school,
+      grade: profileData.grade
+    }
+  });
 
-  const handleSaveProfile = () => {
-    // In a real app, this would save to backend
-    setIsEditing(false);
-    toast({
-      title: "Profile updated",
-      description: "Your profile has been successfully updated.",
-    });
+  const handleSaveProfile = async (data) => {
+    try {
+      // In a real app, this would save to backend
+      setIsEditing(false);
+      toast({
+        title: "Profile updated",
+        description: "Your profile has been successfully updated.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update profile. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
@@ -265,85 +303,115 @@ const Profile = () => {
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Full Name</Label>
-                <Input 
-                  id="name" 
-                  name="name" 
-                  value={editedProfile.name} 
-                  onChange={handleInputChange} 
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleSaveProfile)} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Full Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter your full name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <Input type="email" placeholder="Enter your email" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
               </div>
               
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input 
-                  id="email" 
-                  name="email" 
-                  type="email" 
-                  value={editedProfile.email} 
-                  onChange={handleInputChange} 
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Phone</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter your phone number" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone</Label>
-                <Input 
-                  id="phone" 
-                  name="phone" 
-                  value={editedProfile.phone} 
-                  onChange={handleInputChange} 
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="location">Location</Label>
-                <Input 
-                  id="location" 
-                  name="location" 
-                  value={editedProfile.location} 
-                  onChange={handleInputChange} 
-                />
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="school">School</Label>
-                <Input 
-                  id="school" 
-                  name="school" 
-                  value={editedProfile.school} 
-                  onChange={handleInputChange} 
+                
+                <FormField
+                  control={form.control}
+                  name="location"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Location</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter your location" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
               </div>
               
-              <div className="space-y-2">
-                <Label htmlFor="grade">Grade</Label>
-                <Input 
-                  id="grade" 
-                  name="grade" 
-                  value={editedProfile.grade} 
-                  onChange={handleInputChange} 
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="school"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>School</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter your school name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="grade"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Grade</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter your grade" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
               </div>
-            </div>
-          </div>
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditing(false)} className="gap-2">
-              <X size={16} />
-              Cancel
-            </Button>
-            <Button onClick={handleSaveProfile} className="gap-2">
-              <Save size={16} />
-              Save Changes
-            </Button>
-          </DialogFooter>
+              
+              <DialogFooter>
+                <Button 
+                  variant="outline" 
+                  type="button" 
+                  onClick={() => setIsEditing(false)} 
+                  className="gap-2"
+                >
+                  <X size={16} />
+                  Cancel
+                </Button>
+                <Button type="submit" className="gap-2">
+                  <Save size={16} />
+                  Save Changes
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
     </div>

@@ -75,8 +75,37 @@ import {
   getSubmissionById,
   updateSubmission,
 } from "@/services/taskService.js";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 
 const apiUrl = import.meta.env.VITE_REACT_API_URL || "https://localhost:5000";
+
+// Add the form schema
+const taskFormSchema = z.object({
+  title: z.string()
+    .min(3, { message: "Title must be at least 3 characters long" })
+    .max(100, { message: "Title cannot exceed 100 characters" }),
+  dueDate: z.string()
+    .min(1, { message: "Due date is required" })
+    .refine((date) => {
+      const selectedDate = new Date(date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return selectedDate >= today;
+    }, { message: "Due date cannot be in the past" }),
+  description: z.string()
+    .min(10, { message: "Description must be at least 10 characters long" })
+    .max(500, { message: "Description cannot exceed 500 characters" })
+});
 
 const BatchDetails = () => {
   const { batchId } = useParams();
@@ -119,6 +148,16 @@ const BatchDetails = () => {
     feedback: "",
     rating: 0,
     points: 0,
+  });
+
+  // Initialize form with Zod resolver
+  const form = useForm({
+    resolver: zodResolver(taskFormSchema),
+    defaultValues: {
+      title: "",
+      dueDate: "",
+      description: ""
+    }
   });
 
   const openEditDialog = (task) => {
@@ -249,21 +288,35 @@ const BatchDetails = () => {
     return format(date, "yyyy-MM-dd");
   };
 
-  const handleAddTask = () => {
-    if (!newTask.title || !newTask.dueDate) {
+  // Update handleAddTask to use form validation
+  const handleAddTask = async (data) => {
+    try {
+      const taskData = {
+        ...data,
+        batch: batchId
+      };
+
+      await createTask(taskData);
+      
+      // Reset form
+      form.reset();
+      setShowAddTaskDialog(false);
+      
+      // Refresh tasks list
+      fetchTasks();
+      
       toast({
-        title: "Missing information",
-        description: "Please provide both a title and due date for the task.",
-        variant: "destructive",
+        title: "Task added",
+        description: "New task has been successfully added to the batch."
       });
-      return;
+    } catch (error) {
+      console.error("Error adding task:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add task. Please try again.",
+        variant: "destructive"
+      });
     }
-    setShowAddTaskDialog(false);
-    createTask(newTask);
-    toast({
-      title: "Task added",
-      description: "New task has been successfully added to the batch.",
-    });
   };
 
   // Fetch batch data
@@ -1200,53 +1253,69 @@ const BatchDetails = () => {
                   Create a new task for students in this batch.
                 </DialogDescription>
               </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="title">Task Title</Label>
-                  <Input
-                    id="title"
-                    placeholder="Enter task title"
-                    value={newTask.title}
-                    onChange={(e) =>
-                      setNewTask({ ...newTask, title: e.target.value })
-                    }
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(handleAddTask)} className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="title"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Task Title</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Enter task title" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
-                </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="dueDate">Due Date</Label>
-                  <Input
-                    id="dueDate"
-                    type="date"
-                    value={newTask.dueDate}
-                    onChange={(e) =>
-                      setNewTask({ ...newTask, dueDate: e.target.value })
-                    }
+                  <FormField
+                    control={form.control}
+                    name="dueDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Due Date</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
-                </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    placeholder="Enter task description"
-                    value={newTask.description}
-                    onChange={(e) =>
-                      setNewTask({ ...newTask, description: e.target.value })
-                    }
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description</FormLabel>
+                        <FormControl>
+                          <Textarea 
+                            placeholder="Enter task description" 
+                            className="min-h-[100px]"
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
-                </div>
-              </div>
 
-              <DialogFooter>
-                <Button
-                  variant="outline"
-                  onClick={() => setShowAddTaskDialog(false)}
-                >
-                  Cancel
-                </Button>
-                <Button onClick={handleAddTask}>Add Task</Button>
-              </DialogFooter>
+                  <DialogFooter>
+                    <Button
+                      variant="outline"
+                      type="button"
+                      onClick={() => {
+                        form.reset();
+                        setShowAddTaskDialog(false);
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button type="submit">Add Task</Button>
+                  </DialogFooter>
+                </form>
+              </Form>
             </DialogContent>
           </Dialog>
         </TabsContent>

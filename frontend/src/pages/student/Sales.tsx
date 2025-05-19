@@ -27,6 +27,17 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 
 interface Sale {
   _id: string;
@@ -60,6 +71,28 @@ const mockProducts = [
   { id: 6, name: 'Eco-friendly Water Bottle', price: 20 },
 ];
 
+// Add the form schema
+const saleFormSchema = z.object({
+  customer: z.string()
+    .min(2, { message: "Customer name must be at least 2 characters long" })
+    .max(50, { message: "Customer name cannot exceed 50 characters" })
+    .regex(/^[a-zA-Z\s]*$/, { message: "Customer name can only contain letters and spaces" }),
+  product: z.string()
+    .min(1, { message: "Please select a product" }),
+  customProduct: z.string()
+    .min(2, { message: "Custom product name must be at least 2 characters long" })
+    .max(50, { message: "Custom product name cannot exceed 50 characters" })
+    .optional(),
+  amount: z.string()
+    .min(1, { message: "Amount is required" })
+    .refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0, {
+      message: "Amount must be a positive number"
+    }),
+  notes: z.string()
+    .max(500, { message: "Notes cannot exceed 500 characters" })
+    .optional()
+});
+
 const Sales = () => {
   const [period, setPeriod] = useState('daily');
   const [sales, setSales] = useState<Sale[]>([]);
@@ -68,13 +101,16 @@ const Sales = () => {
   const [isAddSaleOpen, setIsAddSaleOpen] = useState(false);
   const { toast } = useToast();
   
-  // Form state for new sale
-  const [formData, setFormData] = useState<FormData>({
-    product: '',
-    amount: '',
-    customer: '',
-    notes: '',
-    customProduct: ''
+  // Initialize form with Zod resolver
+  const form = useForm({
+    resolver: zodResolver(saleFormSchema),
+    defaultValues: {
+      customer: "",
+      product: "",
+      customProduct: "",
+      amount: "",
+      notes: ""
+    }
   });
 
   useEffect(() => {
@@ -105,58 +141,35 @@ const Sales = () => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    form.reset({ [name]: value });
   };
 
   const handleSelectChange = (name: string) => (value: string) => {
-    setFormData(prev => ({ ...prev, [name]: value }));
+    form.reset({ [name]: value });
   };
 
-  const handleAddSale = async () => {
+  const handleAddSale = async (data) => {
     try {
-      if (!formData.customer || !formData.product || !formData.amount) {
-        toast({
-          title: "Missing information",
-          description: "Please fill in all required fields",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      const product = formData.product === 'custom' ? formData.customProduct : formData.product;
-      const amount = parseFloat(formData.amount);
-      
-      if (isNaN(amount) || amount <= 0) {
-        toast({
-          title: "Invalid amount",
-          description: "Please enter a valid amount",
-          variant: "destructive"
-        });
-        return;
-      }
+      const product = data.product === 'custom' ? data.customProduct : data.product;
+      const amount = parseFloat(data.amount);
 
       const token = localStorage.getItem('token');
       const response = await axios.post(`${apiUrl}/api/sales`, {
         product,
         amount,
-        customer: formData.customer,
-        notes: formData.notes
+        customer: data.customer,
+        notes: data.notes
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
       setSales(prevSales => [response.data, ...prevSales]);
-      setFormData({
-        product: '',
-        amount: '',
-        customer: '',
-        notes: '',
-        customProduct: ''
-      });
+      form.reset();
+      setIsAddSaleOpen(false);
 
       toast({
         title: "Sale recorded",
-        description: `$${amount} sale to ${formData.customer} has been recorded`
+        description: `₹${amount} sale to ${data.customer} has been recorded`
       });
     } catch (err) {
       console.error('Error adding sale:', err);
@@ -268,87 +281,123 @@ const Sales = () => {
                 </DialogDescription>
               </DialogHeader>
               
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="customer">Customer Name</Label>
-                  <Input
-                    id="customer"
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(handleAddSale)} className="space-y-4">
+                  <FormField
+                    control={form.control}
                     name="customer"
-                    value={formData.customer}
-                    onChange={handleInputChange}
-                    placeholder="e.g. John Smith"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Customer Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g. John Smith" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
-                </div>
-                
-                <div className="grid gap-2">
-                  <Label htmlFor="product">Product</Label>
-                  <Select 
-                    value={formData.product}
-                    onValueChange={handleSelectChange('product')}
-                  >
-                    <SelectTrigger id="product">
-                      <SelectValue placeholder="Select a product" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {mockProducts.map(product => (
-                        <SelectItem 
-                          key={product.id} 
-                          value={product.name}
+
+                  <FormField
+                    control={form.control}
+                    name="product"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Product</FormLabel>
+                        <Select 
+                          value={field.value}
+                          onValueChange={field.onChange}
                         >
-                          {product.name} (${product.price})
-                        </SelectItem>
-                      ))}
-                      <SelectItem value="custom">Custom Product</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                {formData.product === 'custom' && (
-                  <div className="grid gap-2">
-                    <Label htmlFor="customProduct">Custom Product Name</Label>
-                    <Input
-                      id="customProduct"
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a product" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {mockProducts.map(product => (
+                              <SelectItem 
+                                key={product.id} 
+                                value={product.name}
+                              >
+                                {product.name} (₹{product.price})
+                              </SelectItem>
+                            ))}
+                            <SelectItem value="custom">Custom Product</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {form.watch("product") === 'custom' && (
+                    <FormField
+                      control={form.control}
                       name="customProduct"
-                      value={formData.customProduct}
-                      onChange={handleInputChange}
-                      placeholder="e.g. Handmade Craft"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Custom Product Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="e.g. Handmade Craft" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
-                  </div>
-                )}
-                
-                <div className="grid gap-2">
-                  <Label htmlFor="amount">Amount ($)</Label>
-                  <Input
-                    id="amount"
+                  )}
+
+                  <FormField
+                    control={form.control}
                     name="amount"
-                    type="number"
-                    value={formData.amount}
-                    onChange={handleInputChange}
-                    placeholder="0.00"
-                    min="0.01"
-                    step="0.01"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Amount (₹)</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number"
+                            placeholder="0.00"
+                            min="0.01"
+                            step="0.01"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
-                </div>
-                
-                <div className="grid gap-2">
-                  <Label htmlFor="notes">Notes (Optional)</Label>
-                  <Textarea
-                    id="notes"
+
+                  <FormField
+                    control={form.control}
                     name="notes"
-                    value={formData.notes}
-                    onChange={handleInputChange}
-                    placeholder="Additional details about the sale..."
-                    rows={3}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Notes (Optional)</FormLabel>
+                        <FormControl>
+                          <Textarea 
+                            placeholder="Additional details about the sale..."
+                            className="min-h-[100px]"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
-                </div>
-              </div>
-              
-              <DialogFooter>
-                <DialogClose asChild>
-                  <Button variant="outline">Cancel</Button>
-                </DialogClose>
-                <Button onClick={handleAddSale}>Record Sale</Button>
-              </DialogFooter>
+
+                  <DialogFooter>
+                    <Button
+                      variant="outline"
+                      type="button"
+                      onClick={() => {
+                        form.reset();
+                        setIsAddSaleOpen(false);
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button type="submit">Record Sale</Button>
+                  </DialogFooter>
+                </form>
+              </Form>
             </DialogContent>
           </Dialog>
         </div>
@@ -428,7 +477,7 @@ const Sales = () => {
                   <Input
                     id="customer-alt"
                     name="customer"
-                    value={formData.customer}
+                    value={form.watch("customer")}
                     onChange={handleInputChange}
                     placeholder="e.g. John Smith"
                   />
@@ -437,8 +486,8 @@ const Sales = () => {
                 <div className="grid gap-2">
                   <Label htmlFor="product-alt">Product</Label>
                   <Select 
-                    value={formData.product}
-                    onValueChange={handleSelectChange('product')}
+                    value={form.watch("product")}
+                    onValueChange={handleSelectChange("product")}
                   >
                     <SelectTrigger id="product-alt">
                       <SelectValue placeholder="Select a product" />
@@ -457,13 +506,13 @@ const Sales = () => {
                   </Select>
                 </div>
                 
-                {formData.product === 'custom' && (
+                {form.watch("product") === 'custom' && (
                   <div className="grid gap-2">
                     <Label htmlFor="customProduct-alt">Custom Product Name</Label>
                     <Input
                       id="customProduct-alt"
                       name="customProduct"
-                      value={formData.customProduct}
+                      value={form.watch("customProduct")}
                       onChange={handleInputChange}
                       placeholder="e.g. Handmade Craft"
                     />
@@ -476,7 +525,7 @@ const Sales = () => {
                     id="amount-alt"
                     name="amount"
                     type="number"
-                    value={formData.amount}
+                    value={form.watch("amount")}
                     onChange={handleInputChange}
                     placeholder="0.00"
                     min="0.01"
@@ -489,7 +538,7 @@ const Sales = () => {
                   <Textarea
                     id="notes-alt"
                     name="notes"
-                    value={formData.notes}
+                    value={form.watch("notes")}
                     onChange={handleInputChange}
                     placeholder="Additional details about the sale..."
                     rows={3}
@@ -501,7 +550,7 @@ const Sales = () => {
                 <DialogClose asChild>
                   <Button variant="outline">Cancel</Button>
                 </DialogClose>
-                <Button onClick={handleAddSale}>Record Sale</Button>
+                <Button onClick={form.handleSubmit(handleAddSale)}>Record Sale</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -568,7 +617,7 @@ const Sales = () => {
               <Input
                 id="customer-fixed"
                 name="customer"
-                value={formData.customer}
+                value={form.watch("customer")}
                 onChange={handleInputChange}
                 placeholder="e.g. John Smith"
               />
@@ -577,8 +626,8 @@ const Sales = () => {
             <div className="grid gap-2">
               <Label htmlFor="product-fixed">Product</Label>
               <Select 
-                value={formData.product}
-                onValueChange={handleSelectChange('product')}
+                value={form.watch("product")}
+                onValueChange={handleSelectChange("product")}
               >
                 <SelectTrigger id="product-fixed">
                   <SelectValue placeholder="Select a product" />
@@ -597,13 +646,13 @@ const Sales = () => {
               </Select>
             </div>
             
-            {formData.product === 'custom' && (
+            {form.watch("product") === 'custom' && (
               <div className="grid gap-2">
                 <Label htmlFor="customProduct-fixed">Custom Product Name</Label>
                 <Input
                   id="customProduct-fixed"
                   name="customProduct"
-                  value={formData.customProduct}
+                  value={form.watch("customProduct")}
                   onChange={handleInputChange}
                   placeholder="e.g. Handmade Craft"
                 />
@@ -616,7 +665,7 @@ const Sales = () => {
                 id="amount-fixed"
                 name="amount"
                 type="number"
-                value={formData.amount}
+                value={form.watch("amount")}
                 onChange={handleInputChange}
                 placeholder="0.00"
                 min="0.01"
@@ -629,7 +678,7 @@ const Sales = () => {
               <Textarea
                 id="notes-fixed"
                 name="notes"
-                value={formData.notes}
+                value={form.watch("notes")}
                 onChange={handleInputChange}
                 placeholder="Additional details about the sale..."
                 rows={3}
@@ -641,7 +690,7 @@ const Sales = () => {
             <DialogClose asChild>
               <Button variant="outline">Cancel</Button>
             </DialogClose>
-            <Button onClick={handleAddSale}>Record Sale</Button>
+            <Button onClick={form.handleSubmit(handleAddSale)}>Record Sale</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

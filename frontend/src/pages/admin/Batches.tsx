@@ -132,14 +132,45 @@ const AdminBatches = () => {
 
   // Define your form schema to match the MongoDB schema
   const formSchema = z.object({
-    batchName: z.string().min(1, { message: "Batch name is required" }),
-    teacher: z.string().min(1, { message: "Teacher selection is required" }),
-    startDate: z.string().min(1, { message: "Start date is required" }),
-    endDate: z.string().min(1, { message: "End date is required" }),
-    time: z.string().min(1, { message: "Session time is required" }),
-    topics: z.string().min(1, { message: "At least one topic is required" }),
-    totalStudents: z.number().default(10).optional(),
-    revenue: z.number().default(100).optional(),
+    batchName: z.string()
+      .min(3, { message: "Batch name must be at least 3 characters long" })
+      .max(50, { message: "Batch name cannot exceed 50 characters" })
+      .regex(/^[a-zA-Z0-9\s-]+$/, { message: "Batch name can only contain letters, numbers, spaces and hyphens" }),
+    teacher: z.string()
+      .min(1, { message: "Please select a teacher" }),
+    startDate: z.string()
+      .min(1, { message: "Start date is required" })
+      .refine((date) => new Date(date) >= new Date(), {
+        message: "Start date cannot be in the past"
+      }),
+    endDate: z.string()
+      .min(1, { message: "End date is required" }),
+    time: z.string()
+      .min(1, { message: "Session time is required" })
+      .regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]\s*(AM|PM|am|pm)\s*-\s*([0-1]?[0-9]|2[0-3]):[0-5][0-9]\s*(AM|PM|am|pm)$/, {
+        message: "Please enter time in format: HH:MM AM/PM - HH:MM AM/PM"
+      }),
+    topics: z.string()
+      .min(1, { message: "At least one topic is required" })
+      .refine((val) => val.split('\n').filter(topic => topic.trim()).length > 0, {
+        message: "Please enter at least one valid topic"
+      }),
+    totalStudents: z.number()
+      .min(1, { message: "Total students must be at least 1" })
+      .max(100, { message: "Total students cannot exceed 100" })
+      .default(10)
+      .optional(),
+    revenue: z.number()
+      .min(0, { message: "Revenue cannot be negative" })
+      .default(100)
+      .optional(),
+  }).refine((data) => {
+    const startDate = new Date(data.startDate);
+    const endDate = new Date(data.endDate);
+    return endDate > startDate;
+  }, {
+    message: "End date must be after start date",
+    path: ["endDate"]
   });
 
   const getBatchStatus = (startDate: string, endDate: string) => {
