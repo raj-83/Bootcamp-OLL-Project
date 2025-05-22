@@ -283,7 +283,9 @@ const AdminStudents = () => {
       
       const studentData = {
         ...data,
-        batches: batchId ? [batchId] : [] // Use an array of batch IDs as per schema
+        batches: batchId ? [batchId] : [], // Use an array of batch IDs as per schema
+        age: parseInt(data.age), // Convert age string to number
+        school: data.school // Ensure school name is included
       };
       
       const response = await axios.patch(

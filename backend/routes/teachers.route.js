@@ -2,6 +2,7 @@ import express from "express";
 import Teacher from "../models/teacher.model.js";
 import Batch from "../models/batch.model.js";
 import Student from "../models/student.model.js";
+import Sales from "../models/sales.model.js";
 import mongoose from "mongoose";
 import  {getTeacherDashboardData}  from "../controllers/mentor/dashboard.controller.js";
 import { protect, authorize } from '../middleware/auth.middleware.js';
@@ -15,7 +16,30 @@ router.get('/dashboard', protect, authorize('Teacher','Mentor'), getTeacherDashb
 router.get('/', async (req, res) => {
   try {
     const teachers = await Teacher.find();
-    res.status(200).json(teachers);
+    
+    // Process each teacher to update their totalEarnings
+    for (let teacher of teachers) {
+      // Find all students associated with this teacher
+      const students = await Student.find({ teachers: teacher._id });
+      
+      // Get all sales made by these students
+      const studentIds = students.map(student => student._id);
+      const sales = await Sales.find({ 
+        student: { $in: studentIds },
+        status: 'completed' // Only count completed sales
+      });
+      
+      // Calculate total earnings from sales
+      const totalEarnings = sales.reduce((sum, sale) => sum + sale.amount, 0);
+      
+      // Update only teacher's totalEarnings
+      teacher.totalEarnings = parseFloat((totalEarnings * 0.3).toFixed(2));
+      await teacher.save();
+    }
+    
+    // Fetch updated teachers data
+    const updatedTeachers = await Teacher.find();
+    res.status(200).json(updatedTeachers);
   } catch (error) {
     console.error("Failed to fetch teachers:", error);
     res.status(500).json({ message: "Failed to fetch teachers" });

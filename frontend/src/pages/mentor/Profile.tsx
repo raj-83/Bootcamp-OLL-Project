@@ -69,7 +69,7 @@ const MentorProfile = () => {
     students: [],
     joiningDate: "",
     status: "unknown",
-    totalBatches: 0,
+    batches: [],
     currentBatches: 0,
     totalEarnings: 0
   });
@@ -465,11 +465,11 @@ const MentorProfile = () => {
                   <h3 className="font-medium mb-2">Teaching Statistics</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="p-4 bg-muted/20 rounded-lg text-center">
-                      <p className="text-lg font-bold">{profile.totalBatches || 0}</p>
+                      <p className="text-lg font-bold">{profile.batches.length || 0}</p>
                       <p className="text-xs text-muted-foreground">Total Batches</p>
                     </div>
                     <div className="p-4 bg-muted/20 rounded-lg text-center">
-                      <p className="text-lg font-bold">{profile.currentBatches || 0}</p>
+                      <p className="text-lg font-bold">{profile.batches.length || 0}</p>
                       <p className="text-xs text-muted-foreground">Current Batches</p>
                     </div>
                     <div className="p-4 bg-muted/20 rounded-lg text-center">
