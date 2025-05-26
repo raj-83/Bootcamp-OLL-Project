@@ -43,50 +43,50 @@ interface TaskSubmissionViewerProps {
 }
 
 // Mock submissions data
-const mockSubmissions: Submission[] = [
-  {
-    id: 1,
-    studentId: 101,
-    studentName: 'Alex Johnson',
-    taskId: 201,
-    taskTitle: 'Business Plan Draft',
-    submittedAt: '2023-07-10T15:30:00',
-    status: 'pending_review',
-    files: [
-      { id: 1, name: 'business_plan.pdf', size: '1.2 MB', url: '#' },
-      { id: 2, name: 'financial_projections.xlsx', size: '850 KB', url: '#' }
-    ]
-  },
-  {
-    id: 2,
-    studentId: 102,
-    studentName: 'Samantha Lee',
-    taskId: 201,
-    taskTitle: 'Business Plan Draft',
-    submittedAt: '2023-07-09T12:45:00',
-    status: 'approved',
-    feedback: 'Excellent work! Your business plan is comprehensive and well-structured.',
-    rating: 5,
-    files: [
-      { id: 3, name: 'business_plan_final.pdf', size: '1.5 MB', url: '#' },
-    ]
-  },
-  {
-    id: 3,
-    studentId: 103,
-    studentName: 'Miguel Santos',
-    taskId: 201,
-    taskTitle: 'Business Plan Draft',
-    submittedAt: '2023-07-08T09:15:00',
-    status: 'needs_revision',
-    feedback: 'Your financial projections need more detail. Please revise the revenue estimates and add explanations for your assumptions.',
-    rating: 3,
-    files: [
-      { id: 4, name: 'business_plan_draft.docx', size: '980 KB', url: '#' },
-      { id: 5, name: 'projections.xlsx', size: '720 KB', url: '#' }
-    ]
-  }
-];
+// const mockSubmissions: Submission[] = [
+//   {
+//     id: 1,
+//     studentId: 101,
+//     studentName: 'Alex Johnson',
+//     taskId: 201,
+//     taskTitle: 'Business Plan Draft',
+//     submittedAt: '2023-07-10T15:30:00',
+//     status: 'pending_review',
+//     files: [
+//       { id: 1, name: 'business_plan.pdf', size: '1.2 MB', url: '#' },
+//       { id: 2, name: 'financial_projections.xlsx', size: '850 KB', url: '#' }
+//     ]
+//   },
+//   {
+//     id: 2,
+//     studentId: 102,
+//     studentName: 'Samantha Lee',
+//     taskId: 201,
+//     taskTitle: 'Business Plan Draft',
+//     submittedAt: '2023-07-09T12:45:00',
+//     status: 'approved',
+//     feedback: 'Excellent work! Your business plan is comprehensive and well-structured.',
+//     rating: 5,
+//     files: [
+//       { id: 3, name: 'business_plan_final.pdf', size: '1.5 MB', url: '#' },
+//     ]
+//   },
+//   {
+//     id: 3,
+//     studentId: 103,
+//     studentName: 'Miguel Santos',
+//     taskId: 201,
+//     taskTitle: 'Business Plan Draft',
+//     submittedAt: '2023-07-08T09:15:00',
+//     status: 'needs_revision',
+//     feedback: 'Your financial projections need more detail. Please revise the revenue estimates and add explanations for your assumptions.',
+//     rating: 3,
+//     files: [
+//       { id: 4, name: 'business_plan_draft.docx', size: '980 KB', url: '#' },
+//       { id: 5, name: 'projections.xlsx', size: '720 KB', url: '#' }
+//     ]
+//   }
+// ];
 
 const TaskSubmissionViewer: React.FC<TaskSubmissionViewerProps> = ({ 
   submissionId,
