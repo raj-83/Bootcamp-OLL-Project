@@ -59,6 +59,8 @@ const mockProducts = [
   { id: 6, name: 'Eco-friendly Water Bottle', price: 20 },
 ];
 
+const apiUrl = import.meta.env.VITE_REACT_API_URL || "https://localhost:5000";
+
 const Sales = () => {
   const [period, setPeriod] = useState('daily');
   const [sales, setSales] = useState<Sale[]>([]);
@@ -81,7 +83,7 @@ const Sales = () => {
       try {
         setLoading(true);
         const token = localStorage.getItem('token');
-        const response = await axios.get('http://localhost:5000/api/sales/my-sales', {
+        const response = await axios.get(`${apiUrl}/api/sales/my-sales`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setSales(response.data);
@@ -135,7 +137,7 @@ const Sales = () => {
       }
 
       const token = localStorage.getItem('token');
-      const response = await axios.post('http://localhost:5000/api/sales', {
+      const response = await axios.post(`${apiUrl}/api/sales`, {
         product,
         amount,
         customer: formData.customer,
