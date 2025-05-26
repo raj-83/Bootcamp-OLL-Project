@@ -47,7 +47,7 @@ const AdminFeedback = () => {
           message: item.feedback,
           date: item.createdAt,
           status: item.status,
-          imageUrl: item.image ? `${apiUrl}${item.image}` : null,
+          imageUrl: item.image ? `${item.image}` : null,
           response: item.reply || null
         }));
         

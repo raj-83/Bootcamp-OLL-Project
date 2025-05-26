@@ -29,6 +29,7 @@ import MentorLeaderboard from "./pages/mentor/Leaderboard";
 import MentorStudentDetails from "./pages/mentor/StudentDetails";
 import MentorSessions from "./pages/mentor/Sessions";
 import MentorProfile from "./pages/mentor/Profile";
+import MentorTaskReview from "./pages/mentor/TaskReview";
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/Dashboard";
@@ -100,10 +101,11 @@ const AppRoutes = () => {
                 <Route path="dashboard" element={<MentorDashboard />} />
                 <Route path="batches" element={<MentorBatches />} />
                 <Route path="batches/:batchId" element={<MentorBatchDetails />} />
-                <Route path="students/:studentId" element={<MentorStudentDetails />} />
+                <Route path="task-review" element={<MentorTaskReview />} />
+                <Route path="sessions" element={<MentorSessions />} />
                 <Route path="earnings" element={<MentorEarnings />} />
                 <Route path="leaderboard" element={<MentorLeaderboard />} />
-                <Route path="sessions" element={<MentorSessions />} />
+                <Route path="students/:studentId" element={<MentorStudentDetails />} />
                 <Route path="profile" element={<MentorProfile />} />
               </Routes>
             </PrivateRoute>

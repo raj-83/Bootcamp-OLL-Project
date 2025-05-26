@@ -23,7 +23,8 @@ import {
   UserCog,
   GraduationCap,
   MessageSquare,
-  LogOut
+  LogOut,
+  ClipboardCheck
 } from 'lucide-react';
 
 const roleBasedNavItems = {
@@ -40,6 +41,7 @@ const roleBasedNavItems = {
   teacher: [
     { to: '/mentor/dashboard', icon: <Home size={18} />, label: 'Dashboard' },
     { to: '/mentor/batches', icon: <Briefcase size={18} />, label: 'Batches' },
+    { to: '/mentor/task-review', icon: <ClipboardCheck size={18} />, label: 'Task Review' },
     { to: '/mentor/sessions', icon: <Video size={18} />, label: 'Sessions' },
     { to: '/mentor/earnings', icon: <DollarSign size={18} />, label: 'Earnings' },
     { to: '/mentor/leaderboard', icon: <Trophy size={18} />, label: 'Leaderboard' },

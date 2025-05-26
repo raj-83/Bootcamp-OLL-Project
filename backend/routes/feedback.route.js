@@ -4,24 +4,9 @@ import BatchReview from '../models/batchReview.model.js';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import { storage } from '../config/cloudinary.js';
 
 const router = express.Router();
-
-// Set up file storage for images
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const uploadDir = 'uploads/';
-    // Create directory if it doesn't exist
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    cb(null, uploadDir);
-  },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + path.extname(file.originalname));
-  }
-});
-
 const upload = multer({ 
   storage: storage,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
@@ -45,7 +30,7 @@ router.post('/feedback', upload.single('image'), async (req, res) => {
       student,
       category,
       feedback,
-      image: req.file ? `/uploads/${req.file.filename}` : ''
+      image: req.file ? req.file.path : ''
     });
     
     await newFeedback.save();
@@ -126,7 +111,7 @@ router.post('/review', upload.single('image'), async (req, res) => {
       student,
       rating,
       review,
-      image: req.file ? `/uploads/${req.file.filename}` : ''
+      image: req.file ? req.file.path : ''
     });
     
     await newReview.save();
@@ -168,8 +153,5 @@ router.get('/review/:id', async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 });
-
-// Serve uploaded files
-router.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 export default router;

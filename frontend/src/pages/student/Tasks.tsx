@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import TaskCardUpdated from '@/components/student/TaskCardUpdated';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -143,7 +142,7 @@ const Tasks = () => {
                 id: 1,
                 name: taskSubmission.fileName || 'Unnamed file',
                 size: formatFileSize(taskSubmission.fileSize),
-                url: `${API_URL}${taskSubmission.fileUrl}`,
+                url: taskSubmission.fileUrl,
                 fileType: taskSubmission.fileType
               }
             ] : undefined
@@ -248,57 +247,63 @@ const Tasks = () => {
       }
       
       // Submit the task
-      await axios.post(`${API_URL}/api/taskSubmission/submit`, formData, {
+      const response = await axios.post(`${API_URL}/api/taskSubmission/submit`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
       });
       
-      // Update the local state to reflect the submission
-      const updatedTasks = tasks.map(task => {
-        if (task._id === taskId) {
-          return {
-            ...task,
-            status: 'submitted' as TaskStatus,
-            submittedAt: new Date().toISOString(),
-            submission: {
-              _id: '', // Will be updated when we refetch
-              notes: submissionText,
-              status: 'submitted',
-              submissionDate: new Date().toISOString()
-            },
-            attachments: submissionFile ? [
-              {
-                id: Date.now(),
-                name: submissionFile.name,
-                size: formatFileSize(submissionFile.size),
-                url: '#' // Will be updated when we refetch
-              }
-            ] : task.attachments
-          };
-        }
-        return task;
-      });
-      
-      setTasks(updatedTasks as Task[]);
-      setSubmissionText('');
-      setSubmissionFile(null);
-      
-      toast({
-        title: "Task Submitted",
-        description: "Your work has been submitted successfully!"
-      });
-      
-      // Refetch tasks to get updated data
-      setTimeout(() => {
-        window.location.reload();
-      }, 1500);
-      
-    } catch (err) {
-      console.error("Error submitting task:", err);
+      if (response.status === 201) {
+        // Update the local state to reflect the submission
+        const updatedTasks = tasks.map(task => {
+          if (task._id === taskId) {
+            return {
+              ...task,
+              status: 'submitted' as TaskStatus,
+              submittedAt: new Date().toISOString(),
+              submission: {
+                _id: response.data.submission._id,
+                notes: submissionText,
+                status: 'submitted',
+                submissionDate: new Date().toISOString(),
+                fileUrl: response.data.submission.fileUrl,
+                fileName: response.data.submission.fileName,
+                fileSize: response.data.submission.fileSize,
+                fileType: response.data.submission.fileType
+              },
+              attachments: submissionFile ? [
+                {
+                  id: Date.now(),
+                  name: submissionFile.name,
+                  size: formatFileSize(submissionFile.size),
+                  url: response.data.submission.fileUrl
+                }
+              ] : undefined
+            };
+          }
+          return task;
+        });
+        
+        setTasks(updatedTasks as Task[]);
+        setSubmissionText('');
+        setSubmissionFile(null);
+        
+        toast({
+          title: "Task Submitted",
+          description: "Your work has been submitted successfully!"
+        });
+        
+        // Refetch tasks to get updated data
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      }
+    } catch (error: any) {
+      console.error("Error submitting task:", error);
+      const errorMessage = error.response?.data?.message || "An error occurred while submitting your task. Please try again.";
       toast({
         title: "Submission Failed",
-        description: "An error occurred while submitting your task. Please try again.",
+        description: errorMessage,
         variant: "destructive"
       });
     }
@@ -842,8 +847,12 @@ const Tasks = () => {
                             </TableCell>
                             <TableCell>{attachment.size}</TableCell>
                             <TableCell className="text-right">
-                              <Button variant="ghost" size="sm" asChild>
-                                <a href={attachment.url} download>Download</a>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => window.open(attachment.url, '_blank')}
+                              >
+                                Download
                               </Button>
                             </TableCell>
                           </TableRow>

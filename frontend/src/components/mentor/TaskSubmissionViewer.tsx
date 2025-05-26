@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,18 +14,22 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { CheckCircle, X, FileText, Download, Star, Edit, Eye } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 
 interface Submission {
-  id: number;
-  studentId: number;
-  studentName: string;
-  taskId: number;
-  taskTitle: string;
-  submittedAt: string;
-  status: 'pending_review' | 'approved' | 'rejected' | 'needs_revision';
+  _id: string;
+  student?: {
+    name: string;
+  };
+  task?: {
+    title: string;
+  };
+  submissionDate: string;
+  status: string;
   feedback?: string;
   rating?: number;
-  files: {
+  points?: number;
+  files?: {
     id: number;
     name: string;
     size: string;
@@ -87,7 +90,7 @@ const mockSubmissions: Submission[] = [
 
 const TaskSubmissionViewer: React.FC<TaskSubmissionViewerProps> = ({ 
   submissionId,
-  submissions = mockSubmissions 
+  submissions = [] 
 }) => {
   const [currentSubmissionId, setCurrentSubmissionId] = useState(submissionId);
   const [viewFileDialogOpen, setViewFileDialogOpen] = useState(false);
@@ -101,7 +104,7 @@ const TaskSubmissionViewer: React.FC<TaskSubmissionViewerProps> = ({
   });
   
   // Find the current submission
-  const currentSubmission = submissions.find(sub => sub.id === currentSubmissionId);
+  const currentSubmission = submissions.find(sub => Number(sub._id) === currentSubmissionId);
   
   if (!currentSubmission) {
     return (
@@ -115,12 +118,12 @@ const TaskSubmissionViewer: React.FC<TaskSubmissionViewerProps> = ({
   
   // Navigate to next or previous submission
   const handleNavigation = (direction: 'next' | 'prev') => {
-    const currentIndex = submissions.findIndex(sub => sub.id === currentSubmissionId);
+    const currentIndex = submissions.findIndex(sub => Number(sub._id) === currentSubmissionId);
     
     if (direction === 'next' && currentIndex < submissions.length - 1) {
-      setCurrentSubmissionId(submissions[currentIndex + 1].id);
+      setCurrentSubmissionId(Number(submissions[currentIndex + 1]._id));
     } else if (direction === 'prev' && currentIndex > 0) {
-      setCurrentSubmissionId(submissions[currentIndex - 1].id);
+      setCurrentSubmissionId(Number(submissions[currentIndex - 1]._id));
     }
   };
   
@@ -133,13 +136,13 @@ const TaskSubmissionViewer: React.FC<TaskSubmissionViewerProps> = ({
     // Mock submission review
     toast({
       title: "Review submitted",
-      description: `You have reviewed ${currentSubmission.studentName}'s submission.`
+      description: `You have reviewed ${currentSubmission.student?.name}'s submission.`
     });
     
     setReviewDialogOpen(false);
   };
   
-  const getStatusBadge = (status: Submission['status']) => {
+  const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending_review':
         return <Badge variant="outline">Pending Review</Badge>;
@@ -149,6 +152,8 @@ const TaskSubmissionViewer: React.FC<TaskSubmissionViewerProps> = ({
         return <Badge className="bg-destructive/10 text-destructive hover:bg-destructive/20">Rejected</Badge>;
       case 'needs_revision':
         return <Badge className="bg-warning/10 text-warning hover:bg-warning/20">Needs Revision</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
     }
   };
   
@@ -157,50 +162,51 @@ const TaskSubmissionViewer: React.FC<TaskSubmissionViewerProps> = ({
       <CardHeader className="pb-3">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <CardTitle>{currentSubmission.taskTitle}</CardTitle>
+            <CardTitle>{currentSubmission.task?.title}</CardTitle>
             <CardDescription>
-              Submitted by {currentSubmission.studentName} on {new Date(currentSubmission.submittedAt).toLocaleString()}
+              Submitted by {currentSubmission.student?.name} on {new Date(currentSubmission.submissionDate).toLocaleString()}
             </CardDescription>
           </div>
           {getStatusBadge(currentSubmission.status)}
         </div>
       </CardHeader>
       
-      <CardContent className="pb-0 space-y-4">
-        <div className="bg-muted/30 rounded-lg p-4">
-          <h4 className="text-sm font-medium mb-2">Submitted Files</h4>
-          <div className="space-y-2">
-            {currentSubmission.files.map(file => (
-              <div 
-                key={file.id} 
-                className="flex items-center justify-between p-3 bg-background rounded border"
-              >
-                <div className="flex items-center gap-2">
-                  <FileText className="h-5 w-5 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">{file.name}</p>
-                    <p className="text-xs text-muted-foreground">{file.size}</p>
+      <CardContent className="space-y-4">
+        {currentSubmission.files && currentSubmission.files.length > 0 && (
+          <div className="bg-muted/30 rounded-lg p-4">
+            <h4 className="text-sm font-medium mb-2">Submitted Files</h4>
+            <div className="space-y-2">
+              {currentSubmission.files.map(file => (
+                <div 
+                  key={file.id} 
+                  className="flex items-center justify-between p-3 bg-background rounded border"
+                >
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">{file.name}</p>
+                      <p className="text-xs text-muted-foreground">{file.size}</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8"
+                      onClick={() => handleViewFile(file)}
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <Download className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-8 w-8"
-                    onClick={() => handleViewFile(file)}
-                  >
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <Download className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
+        )}
         
-        {/* Feedback section (if exists) */}
         {currentSubmission.feedback && (
           <div className="bg-muted/30 rounded-lg p-4">
             <h4 className="text-sm font-medium mb-2">Feedback</h4>
@@ -230,7 +236,7 @@ const TaskSubmissionViewer: React.FC<TaskSubmissionViewerProps> = ({
             variant="outline"
             size="sm"
             onClick={() => handleNavigation('prev')}
-            disabled={submissions.findIndex(sub => sub.id === currentSubmissionId) === 0}
+            disabled={submissions.findIndex(sub => Number(sub._id) === currentSubmissionId) === 0}
           >
             Previous
           </Button>
@@ -238,7 +244,7 @@ const TaskSubmissionViewer: React.FC<TaskSubmissionViewerProps> = ({
             variant="outline"
             size="sm"
             onClick={() => handleNavigation('next')}
-            disabled={submissions.findIndex(sub => sub.id === currentSubmissionId) === submissions.length - 1}
+            disabled={submissions.findIndex(sub => Number(sub._id) === currentSubmissionId) === submissions.length - 1}
           >
             Next
           </Button>
@@ -317,21 +323,14 @@ const TaskSubmissionViewer: React.FC<TaskSubmissionViewerProps> = ({
             
             <div className="space-y-2">
               <Label htmlFor="rating">Rating</Label>
-              <Select 
+              <Input 
+                id="rating"
+                type="number"
+                min="1"
+                max="5"
                 value={reviewData.rating}
-                onValueChange={(value) => setReviewData({ ...reviewData, rating: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select rating" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1">1 - Poor</SelectItem>
-                  <SelectItem value="2">2 - Below Average</SelectItem>
-                  <SelectItem value="3">3 - Average</SelectItem>
-                  <SelectItem value="4">4 - Good</SelectItem>
-                  <SelectItem value="5">5 - Excellent</SelectItem>
-                </SelectContent>
-              </Select>
+                onChange={(e) => setReviewData({ ...reviewData, rating: e.target.value })}
+              />
             </div>
           </div>
           
