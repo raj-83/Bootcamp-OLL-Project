@@ -236,7 +236,7 @@ const AdminEarnings = () => {
                       />
                       <YAxis />
                       <Tooltip 
-                        formatter={(value) => [`$${value}`, 'Earnings']}
+                        formatter={(value) => [`₹${value}`, 'Earnings']}
                         labelFormatter={(label) => `Date: ${formatDate(label)}`}
                       />
                       <Legend />
@@ -292,7 +292,7 @@ const AdminEarnings = () => {
                         height={60}
                       />
                       <YAxis />
-                      <Tooltip formatter={(value) => [`$${value}`, '']} />
+                      <Tooltip formatter={(value) => [`₹${value}`, '']} />
                       <Legend />
                       <Bar 
                         dataKey="platformEarnings" 
@@ -385,7 +385,7 @@ const AdminEarnings = () => {
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="name" />
                       <YAxis />
-                      <Tooltip formatter={(value) => [`$${value}`, 'Earnings']} />
+                      <Tooltip formatter={(value) => [`₹${value}`, 'Earnings']} />
                       <Legend />
                       <Bar 
                         dataKey="earnings" 
@@ -467,7 +467,7 @@ const AdminEarnings = () => {
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Pie>
-                      <Tooltip formatter={(value) => [`$${value}`, '']} />
+                      <Tooltip formatter={(value) => [`₹${value}`, '']} />
                       <Legend />
                     </PieChart>
                   </ResponsiveContainer>
@@ -486,7 +486,7 @@ const AdminEarnings = () => {
                         <div className="w-4 h-4 rounded-full" style={{ backgroundColor: item.color }} />
                         <div>
                           <p className="font-medium">{item.name}</p>
-                          <p className="text-2xl font-bold">${item.value}</p>
+                          <p className="text-2xl font-bold">₹{item.value}</p>
                           <p className="text-xs text-muted-foreground">
                             {item.name === 'Platform' && '20% platform fee'}
                             {item.name === 'Teachers' && '20% commission to teachers'}

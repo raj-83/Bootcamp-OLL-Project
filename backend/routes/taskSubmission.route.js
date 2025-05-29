@@ -9,6 +9,9 @@ const router = express.Router();
 
 // File filter to only allow certain file types
 const fileFilter = (req, file, cb) => {
+  console.log('Received file MIME type:', file.mimetype);
+  console.log('Received file original name:', file.originalname);
+  
   const allowedFileTypes = [
     'application/pdf',
     'application/msword',
@@ -19,6 +22,7 @@ const fileFilter = (req, file, cb) => {
   if (allowedFileTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
+    console.log('File type not allowed. Allowed types:', allowedFileTypes);
     cb(new Error('Invalid file type. Only PDF, DOC, DOCX, JPG, and PNG files are allowed.'), false);
   }
 };

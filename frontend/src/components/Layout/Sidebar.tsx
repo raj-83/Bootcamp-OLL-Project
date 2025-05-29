@@ -68,6 +68,8 @@ const Sidebar = () => {
   const handleLogout = () => {
     // Clear user data from localStorage
     localStorage.removeItem('user');
+    localStorage.removeItem('token');
+    localStorage.removeItem('id');
     // Redirect to login page
     navigate('/login');
   };

@@ -105,7 +105,12 @@ const AdminTeachers = () => {
     status: z.enum(['active', 'inactive'], {
       required_error: "Please select a status",
       invalid_type_error: "Status must be either active or inactive"
-    })
+    }),
+    password: z.string()
+      .min(8, { message: "Password must be at least 8 characters long" })
+      .regex(/[A-Z]/, { message: "Password must contain at least one uppercase letter" })
+      .regex(/[a-z]/, { message: "Password must contain at least one lowercase letter" })
+      .regex(/[0-9]/, { message: "Password must contain at least one number" })
   });
 
   // Update the add form setup with the schema
@@ -116,7 +121,8 @@ const AdminTeachers = () => {
       email: '',
       phone: '',
       specialization: '',
-      status: 'active'
+      status: 'active',
+      password: ''
     }
   });
 
@@ -565,6 +571,20 @@ const AdminTeachers = () => {
                   )}
                 />
               </div>
+
+              <FormField
+                control={addForm.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Password</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="Enter password for teacher" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               
               <DialogFooter>
                 <Button variant="outline" type="button" onClick={() => setShowAddTeacherDialog(false)}>

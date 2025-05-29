@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { DollarSign, TrendingUp, BarChart3, Calendar, Plus } from 'lucide-react';
+import { IndianRupee, TrendingUp, BarChart3, Calendar, Plus } from 'lucide-react';
 import SalesChart from '@/components/student/SalesChart';
 import { Button } from '@/components/ui/button';
 import { 
@@ -157,7 +157,7 @@ const Sales = () => {
 
       toast({
         title: "Sale recorded",
-        description: `$${amount} sale to ${formData.customer} has been recorded`
+        description: `₹${amount} sale to ${formData.customer} has been recorded`
       });
     } catch (err) {
       console.error('Error adding sale:', err);
@@ -296,7 +296,7 @@ const Sales = () => {
                           key={product.id} 
                           value={product.name}
                         >
-                          {product.name} (${product.price})
+                          {product.name} (₹{product.price})
                         </SelectItem>
                       ))}
                       <SelectItem value="custom">Custom Product</SelectItem>
@@ -318,7 +318,7 @@ const Sales = () => {
                 )}
                 
                 <div className="grid gap-2">
-                  <Label htmlFor="amount">Amount ($)</Label>
+                  <Label htmlFor="amount">Amount (₹)</Label>
                   <Input
                     id="amount"
                     name="amount"
@@ -363,8 +363,8 @@ const Sales = () => {
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5 text-success" />
-              <div className="text-2xl font-bold">${totalEarnings}</div>
+              <IndianRupee className="h-5 w-5 text-success" />
+              <div className="text-2xl font-bold">₹{totalEarnings}</div>
             </div>
           </CardContent>
         </Card>
@@ -388,7 +388,7 @@ const Sales = () => {
           <CardContent>
             <div className="flex items-center gap-2">
               <BarChart3 className="h-5 w-5 text-accent" />
-              <div className="text-2xl font-bold">${averageSale.toFixed(2)}</div>
+              <div className="text-2xl font-bold">₹{averageSale.toFixed(2)}</div>
             </div>
           </CardContent>
         </Card>
@@ -450,7 +450,7 @@ const Sales = () => {
                           key={product.id} 
                           value={product.name}
                         >
-                          {product.name} (${product.price})
+                          {product.name} (₹{product.price})
                         </SelectItem>
                       ))}
                       <SelectItem value="custom">Custom Product</SelectItem>
@@ -472,7 +472,7 @@ const Sales = () => {
                 )}
                 
                 <div className="grid gap-2">
-                  <Label htmlFor="amount-alt">Amount ($)</Label>
+                  <Label htmlFor="amount-alt">Amount (₹)</Label>
                   <Input
                     id="amount-alt"
                     name="amount"
@@ -529,7 +529,7 @@ const Sales = () => {
                       year: 'numeric'
                     })}
                   </TableCell>
-                  <TableCell className="text-right font-medium">${sale.amount}</TableCell>
+                  <TableCell className="text-right font-medium">₹{sale.amount}</TableCell>
                 </TableRow>
               ))}
               {sales.length === 0 && (
@@ -590,7 +590,7 @@ const Sales = () => {
                       key={product.id} 
                       value={product.name}
                     >
-                      {product.name} (${product.price})
+                      {product.name} (₹{product.price})
                     </SelectItem>
                   ))}
                   <SelectItem value="custom">Custom Product</SelectItem>
@@ -612,7 +612,7 @@ const Sales = () => {
             )}
             
             <div className="grid gap-2">
-              <Label htmlFor="amount-fixed">Amount ($)</Label>
+              <Label htmlFor="amount-fixed">Amount (₹)</Label>
               <Input
                 id="amount-fixed"
                 name="amount"

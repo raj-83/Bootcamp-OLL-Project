@@ -45,12 +45,12 @@ const SalesChart: React.FC<SalesChartProps> = ({
         <div className="grid grid-cols-2 gap-4 mb-4">
           <div>
             <p className="text-sm font-medium text-muted-foreground">Total Sales</p>
-            <p className="text-2xl font-bold">${totalSales}</p>
+            <p className="text-2xl font-bold">₹{totalSales}</p>
           </div>
           {bestDay && (
             <div>
               <p className="text-sm font-medium text-muted-foreground">Best Day</p>
-              <p className="text-2xl font-bold">${bestDay.amount}</p>
+              <p className="text-2xl font-bold">₹{bestDay.amount}</p>
               <p className="text-xs text-muted-foreground">
                 {new Date(bestDay.date).toLocaleDateString('en-US', { 
                   weekday: 'long',
@@ -81,13 +81,13 @@ const SalesChart: React.FC<SalesChartProps> = ({
                 padding={{ left: 10, right: 10 }}
               />
               <YAxis 
-                tickFormatter={(value) => `$${value}`}
+                tickFormatter={(value) => `₹${value}`}
                 tickLine={false}
                 axisLine={false}
                 width={60}
               />
               <Tooltip 
-                formatter={(value) => [`$${value}`, 'Sales']}
+                formatter={(value) => [`₹${value}`, 'Sales']}
                 labelFormatter={(label) => `Date: ${label}`}
               />
               <Area 

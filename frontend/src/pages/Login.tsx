@@ -160,8 +160,17 @@ const Login = () => {
       
       toast({
         title: "Registration successful!",
-        description: "Your account has been created.",
+        description: "Please login with your credentials to continue.",
       });
+
+      // Switch to login tab
+      setActiveTab("login");
+      
+      // Pre-fill the login email
+      setLoginEmail(data.email);
+      
+      // Reset the register form
+      registerForm.reset();
 
     } catch (error: any) {
       toast({

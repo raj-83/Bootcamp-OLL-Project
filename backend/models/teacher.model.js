@@ -4,7 +4,7 @@ const { Schema } = mongoose;
 const teacherSchema = new mongoose.Schema({
   name: String,
   email: String,
-  password:String,
+  password: String,
   phone: String,
   location: String,
   jobTitle: String,

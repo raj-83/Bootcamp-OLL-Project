@@ -4,6 +4,7 @@ import Batch from "../models/batch.model.js";
 import Student from "../models/student.model.js";
 import Sales from "../models/sales.model.js";
 import mongoose from "mongoose";
+import bcrypt from "bcrypt";
 import  {getTeacherDashboardData}  from "../controllers/mentor/dashboard.controller.js";
 import { protect, authorize } from '../middleware/auth.middleware.js';
 
@@ -106,10 +107,10 @@ router.put('/:id', async (req, res) => {
 // POST /api/teachers
 router.post("/", async (req, res) => {
   try {
-    const { name, email, phone, specialization, status } = req.body;
+    const { name, email, phone, specialization, status, password } = req.body;
 
-    if (!name || !email || !phone) {
-      return res.status(400).json({ message: "Name, email, and phone are required." });
+    if (!name || !email || !phone || !password) {
+      return res.status(400).json({ message: "Name, email, phone, and password are required." });
     }
 
     // Check if email already exists
@@ -118,12 +119,18 @@ router.post("/", async (req, res) => {
       return res.status(400).json({ message: "Teacher with this email already exists" });
     }
 
+    // Hash the password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
     const newTeacher = new Teacher({ 
       name, 
       email, 
       phone, 
       specialization, 
-      status: status || 'active' 
+      status: status || 'active',
+      password: hashedPassword,
+      role: 'Teacher'
     });
     
     await newTeacher.save();

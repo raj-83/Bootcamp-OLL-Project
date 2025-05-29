@@ -1,4 +1,3 @@
-
 // Enhanced frontend/src/context/AuthContext.tsx
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -105,19 +104,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       if (!response.ok) throw new Error(data.message);
       
-      localStorage.setItem('user', JSON.stringify(data));
-      setUser(data);
-      
-      // Navigate based on role
-      const role = data.role.toLowerCase();
-      
-      if (role === 'student') {
-        navigate('/student/dashboard');
-      } else if (role === 'teacher' || role === 'mentor') {
-        navigate('/mentor/dashboard');
-      } else {
-        navigate('/');
-      }
+      // Navigate to login page with register tab
+      navigate('/login?tab=login');
       
       return data;
     } catch (error: any) {
@@ -128,6 +116,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const logout = () => {
     localStorage.removeItem('user');
+    localStorage.removeItem('token');
+    localStorage.removeItem('id');
     setUser(null);
     navigate('/login');
   };

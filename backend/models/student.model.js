@@ -12,7 +12,10 @@ const studentSchema = new mongoose.Schema({
     lowercase: true
   },
   phone: String,
-  password: String,
+  password: {
+    type: String,
+    required: true
+  },
   age: Number,
   location: String,
   school: String,
