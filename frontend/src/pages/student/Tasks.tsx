@@ -3,7 +3,7 @@ import TaskCardUpdated from '@/components/student/TaskCardUpdated';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { ArrowRight, CheckSquare, Clock, AlertTriangle, Eye, Upload, FileText } from 'lucide-react';
+import { ArrowRight, CheckSquare, Clock, AlertTriangle, Eye, Upload, FileText, ExternalLink } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   Dialog,
@@ -59,6 +59,7 @@ interface Task {
     rating?: number;
     points?: number;
     submissionDate: string;
+    googleDocsLink?: string;
   };
 }
 
@@ -136,7 +137,8 @@ const Tasks = () => {
               feedback: taskSubmission.feedback,
               rating: taskSubmission.rating,
               points: taskSubmission.points,
-              submissionDate: taskSubmission.submissionDate
+              submissionDate: taskSubmission.submissionDate,
+              googleDocsLink: taskSubmission.googleDocsLink
             } : undefined,
             attachments: taskSubmission?.fileUrl ? [
               {
@@ -840,7 +842,7 @@ const Tasks = () => {
       {/* Task Submission Dialog */}
       {selectedTask && (
         <Dialog open={!!selectedTask} onOpenChange={() => setSelectedTask(null)}>
-          <DialogContent className="max-w-3xl">
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Task Submission: {selectedTask.title}</DialogTitle>
               <DialogDescription>
@@ -869,6 +871,25 @@ const Tasks = () => {
                       ))}
                     </div>
                   )}
+                </div>
+              )}
+
+              
+              {/* Google Docs Link */}
+              {selectedTask.submission?.googleDocsLink && (
+                <div className="space-y-2">
+                  <h3 className="text-sm font-medium">Google Docs Submission</h3>
+                  <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
+                    <ExternalLink className="h-4 w-4" />
+                    <span className="text-sm flex-1 truncate">{selectedTask.submission.googleDocsLink}</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => window.open(selectedTask.submission?.googleDocsLink, '_blank')}
+                    >
+                      Open Link
+                    </Button>
+                  </div>
                 </div>
               )}
               
