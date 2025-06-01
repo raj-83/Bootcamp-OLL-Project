@@ -33,6 +33,7 @@ interface TaskSubmission {
   status: string;
   submissionDate: string;
   notes: string;
+  googleDocsLink?: string;
   fileUrl?: string;
   fileName?: string;
   fileSize?: number;
@@ -58,7 +59,11 @@ const TaskReview = () => {
   const fetchSubmissions = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_URL}/api/taskSubmission`);
+      const teacherId = localStorage.getItem('id');
+      if (!teacherId) {
+        throw new Error('Teacher ID not found');
+      }
+      const response = await axios.get(`${API_URL}/api/taskSubmission/teacher/${teacherId}`);
       setSubmissions(response.data);
     } catch (err) {
       console.error('Error fetching submissions:', err);
@@ -74,10 +79,14 @@ const TaskReview = () => {
   };
 
   const filteredSubmissions = submissions.filter(submission => {
+    if (!submission.student || !submission.task || !submission.batch) {
+      return false;
+    }
+
     const matchesSearch = 
-      submission.student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      submission.task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      submission.batch.batchName.toLowerCase().includes(searchQuery.toLowerCase());
+      (submission.student.name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+      (submission.task.title?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+      (submission.batch.batchName?.toLowerCase() || '').includes(searchQuery.toLowerCase());
     
     const matchesStatus = statusFilter === 'all' || submission.status === statusFilter;
     
@@ -168,6 +177,7 @@ const TaskReview = () => {
                 <TableHead>Batch</TableHead>
                 <TableHead>Submitted</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Submission Type</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -176,14 +186,29 @@ const TaskReview = () => {
                 filteredSubmissions.map((submission) => (
                   <TableRow key={submission._id}>
                     <TableCell className="font-medium">
-                      {submission.student.name}
+                      {submission.student?.name || 'N/A'}
                     </TableCell>
-                    <TableCell>{submission.task.title}</TableCell>
-                    <TableCell>{submission.batch.batchName}</TableCell>
+                    <TableCell>{submission.task?.title || 'N/A'}</TableCell>
+                    <TableCell>{submission.batch?.batchName || 'N/A'}</TableCell>
                     <TableCell>
                       {format(new Date(submission.submissionDate), 'MMM d, yyyy')}
                     </TableCell>
                     <TableCell>{getStatusBadge(submission.status)}</TableCell>
+                    <TableCell>
+                      {submission.googleDocsLink ? (
+                        <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                          Google Docs
+                        </Badge>
+                      ) : submission.fileUrl ? (
+                        <Badge variant="outline" className="bg-green-50 text-green-700">
+                          File Upload
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="bg-gray-50 text-gray-700">
+                          Notes Only
+                        </Badge>
+                      )}
+                    </TableCell>
                     <TableCell className="text-right">
                       <Button
                         variant="outline"
@@ -198,7 +223,7 @@ const TaskReview = () => {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-4">
+                  <TableCell colSpan={7} className="text-center py-4">
                     No submissions found
                   </TableCell>
                 </TableRow>

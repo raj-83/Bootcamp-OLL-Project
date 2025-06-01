@@ -21,7 +21,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import axios from 'axios';
 import { format } from 'date-fns';
-import { FileText, Download } from 'lucide-react';
+import { FileText, Download, ExternalLink } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_REACT_API_URL || 'http://localhost:5000';
 
@@ -44,6 +44,7 @@ interface TaskSubmission {
   status: string;
   submissionDate: string;
   notes: string;
+  googleDocsLink?: string;
   fileUrl?: string;
   fileName?: string;
   fileSize?: number;
@@ -113,7 +114,7 @@ const TaskReviewDialog: React.FC<TaskReviewDialogProps> = ({
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Review Task Submission</DialogTitle>
           <DialogDescription>
@@ -150,6 +151,24 @@ const TaskReviewDialog: React.FC<TaskReviewDialogProps> = ({
                 <h3 className="text-sm font-medium">Student Notes</h3>
                 <div className="mt-2 p-3 bg-muted rounded-md text-sm">
                   {submission.notes}
+                </div>
+              </div>
+            )}
+
+            {/* Google Docs Link */}
+            {submission.googleDocsLink && (
+              <div>
+                <h3 className="text-sm font-medium">Google Docs Submission</h3>
+                <div className="mt-2 flex items-center gap-2 p-3 bg-muted rounded-md">
+                  <ExternalLink className="h-4 w-4" />
+                  <span className="text-sm flex-1 truncate">{submission.googleDocsLink}</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => window.open(submission.googleDocsLink, '_blank')}
+                  >
+                    Open Link
+                  </Button>
                 </div>
               </div>
             )}
@@ -249,7 +268,7 @@ const TaskReviewDialog: React.FC<TaskReviewDialogProps> = ({
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="mt-6">
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>

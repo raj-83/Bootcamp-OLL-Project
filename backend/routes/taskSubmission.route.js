@@ -2,6 +2,7 @@ import express from 'express';
 import TaskSubmission from '../models/taskSubmission.model.js';
 import Task from '../models/task.model.js';
 import Student from '../models/student.model.js';
+import Teacher from '../models/teacher.model.js';
 import multer from 'multer';
 import { storage, cloudinary } from '../config/cloudinary.js';
 
@@ -62,8 +63,54 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Get all submissions for students assigned to a teacher
+router.get('/teacher/:teacherId', async (req, res) => {
+  try {
+    const { teacherId } = req.params;
+    
+    // First, get all students assigned to this teacher
+    const teacher = await Teacher.findById(teacherId).populate('students');
+    if (!teacher) {
+      return res.status(404).json({ message: 'Teacher not found' });
+    }
+
+    const studentIds = teacher.students.map(student => student._id);
+
+    // Then get all submissions for these students
+    const submissions = await TaskSubmission.find({
+      student: { $in: studentIds }
+    })
+      .populate('student', 'name')
+      .populate('task', 'title description dueDate')
+      .populate('batch', 'batchName')
+      .sort({ createdAt: -1 });
+
+    res.status(200).json(submissions);
+  } catch (error) {
+    console.error('Error fetching teacher submissions:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Get all submissions for a student
+router.get('/student/:studentId', async (req, res) => {
+  try {
+    const { studentId } = req.params;
+
+    const submissions = await TaskSubmission.find({ student: studentId })
+      .populate('task')
+      .populate('batch')
+      .sort({ createdAt: -1 });
+
+    res.status(200).json(submissions);
+  } catch (error) {
+    console.error('Error fetching student submissions:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // Get all submissions for a task
-router.get('/:taskId', async (req, res) => {
+router.get('/task/:taskId', async (req, res) => {
   try {
     const { taskId } = req.params;
     const submissions = await TaskSubmission.find({ task: taskId })
@@ -78,13 +125,34 @@ router.get('/:taskId', async (req, res) => {
   }
 });
 
+// Get a specific task submission by a student
+router.get('/submission/:taskId/:studentId', async (req, res) => {
+  try {
+    const { taskId, studentId } = req.params;
+
+    const submission = await TaskSubmission.findOne({
+      task: taskId,
+      student: studentId
+    }).populate('task');
+
+    if (!submission) {
+      return res.status(404).json({ message: 'Submission not found' });
+    }
+
+    res.status(200).json(submission);
+  } catch (error) {
+    console.error('Error fetching submission:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // Submit a task
 router.post('/submit', upload.single('file'), handleMulterError, async (req, res) => {
   try {
     console.log('Request body:', req.body);
     console.log('Request file:', req.file);
 
-    const { studentId, taskId, batchId, notes } = req.body;
+    const { studentId, taskId, batchId, notes, googleDocsLink } = req.body;
 
     if (!studentId || !taskId || !batchId) {
       return res.status(400).json({ 
@@ -108,6 +176,7 @@ router.post('/submit', upload.single('file'), handleMulterError, async (req, res
       task: taskId,
       batch: batchId,
       notes: notes || '',
+      googleDocsLink: googleDocsLink || '',
       status: 'submitted'
     };
 
@@ -162,44 +231,6 @@ router.post('/submit', upload.single('file'), handleMulterError, async (req, res
   }
 });
 
-// Get all submissions for a student
-router.get('/student/:studentId', async (req, res) => {
-  try {
-    const { studentId } = req.params;
-
-    const submissions = await TaskSubmission.find({ student: studentId })
-      .populate('task')
-      .populate('batch')
-      .sort({ createdAt: -1 });
-
-    res.status(200).json(submissions);
-  } catch (error) {
-    console.error('Error fetching student submissions:', error);
-    res.status(500).json({ message: error.message });
-  }
-});
-
-// Get a specific task submission by a student
-router.get('/:taskId/:studentId', async (req, res) => {
-  try {
-    const { taskId, studentId } = req.params;
-
-    const submission = await TaskSubmission.findOne({
-      task: taskId,
-      student: studentId
-    }).populate('task');
-
-    if (!submission) {
-      return res.status(404).json({ message: 'Submission not found' });
-    }
-
-    res.status(200).json(submission);
-  } catch (error) {
-    console.error('Error fetching submission:', error);
-    res.status(500).json({ message: error.message });
-  }
-});
-
 // Update submission status
 router.put('/:submissionId', async (req, res) => {
   try {
@@ -214,6 +245,16 @@ router.put('/:submissionId', async (req, res) => {
 
     if (!submission) {
       return res.status(404).json({ message: 'Submission not found' });
+    }
+
+    // Update student points
+    if (status === 'approved' && points > 0) {
+      const student = await Student.findById(submission.student);
+      if (student) {
+        // Add new points to existing points
+        const updatedPoints = student.points + points;
+        await Student.findByIdAndUpdate(submission.student, { points: updatedPoints });
+      }
     }
 
     if (status === 'approved') {

@@ -6,45 +6,72 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import UserAvatar from '@/components/ui-custom/UserAvatar';
+import axios from 'axios';
+import { useToast } from '@/hooks/use-toast';
 
-// Mock data for national leaderboard
-const nationalStudentLeaderboard = [
-  { id: 1, name: 'Alex Johnson', points: 1250, earnings: 345, school: 'Lincoln High School', rank: 1, nationalRank: 15, taskCompletion: 95, attendance: 98 },
-  { id: 2, name: 'Samantha Lee', points: 1100, earnings: 290, school: 'Washington Academy', rank: 2, nationalRank: 23, taskCompletion: 92, attendance: 95 },
-  { id: 3, name: 'Miguel Santos', points: 950, earnings: 210, school: 'Riverside Prep', rank: 3, nationalRank: 42, taskCompletion: 88, attendance: 90 },
-  { id: 4, name: 'Emma Wilson', points: 900, earnings: 185, school: 'Oakwood High', rank: 4, nationalRank: 56, taskCompletion: 85, attendance: 92 },
-  { id: 5, name: 'Jayden Brown', points: 850, earnings: 170, school: 'Lincoln High School', rank: 5, nationalRank: 78, taskCompletion: 82, attendance: 88 },
-  { id: 6, name: 'Sophia Chen', points: 820, earnings: 165, school: 'Westlake Academy', rank: 6, nationalRank: 95, taskCompletion: 80, attendance: 86 },
-  { id: 7, name: 'Ethan Miller', points: 780, earnings: 140, school: 'Riverside Prep', rank: 7, nationalRank: 112, taskCompletion: 78, attendance: 85 },
-  { id: 8, name: 'Olivia Davis', points: 750, earnings: 120, school: 'Washington Academy', rank: 8, nationalRank: 143, taskCompletion: 75, attendance: 84 },
-  { id: 9, name: 'Noah Garcia', points: 700, earnings: 110, school: 'Oakwood High', rank: 9, nationalRank: 187, taskCompletion: 72, attendance: 82 },
-  { id: 10, name: 'Ava Martinez', points: 650, earnings: 95, school: 'Westlake Academy', rank: 10, nationalRank: 203, taskCompletion: 70, attendance: 80 },
-];
+const API_URL = import.meta.env.VITE_REACT_API_URL || 'http://localhost:5000';
 
-// Mock data for batch leaderboard (smaller, more focused list)
-const batchStudentLeaderboard = [
-  { id: 7, name: 'Ethan Miller', points: 780, earnings: 140, school: 'Riverside Prep', rank: 1, nationalRank: 112, taskCompletion: 78, attendance: 85 },
-  { id: 11, name: 'Lucas Wright', points: 620, earnings: 105, school: 'Riverside Prep', rank: 2, nationalRank: 231, taskCompletion: 68, attendance: 79 },
-  { id: 12, name: 'Isabella Kim', points: 580, earnings: 95, school: 'Riverside Prep', rank: 3, nationalRank: 267, taskCompletion: 65, attendance: 76 },
-  { id: 13, name: 'Mason Zhang', points: 540, earnings: 85, school: 'Riverside Prep', rank: 4, nationalRank: 302, taskCompletion: 62, attendance: 74 },
-  { id: 14, name: 'Zoe Thompson', points: 510, earnings: 80, school: 'Riverside Prep', rank: 5, nationalRank: 348, taskCompletion: 60, attendance: 72 },
-  { id: 15, name: 'Dylan Jackson', points: 480, earnings: 75, school: 'Riverside Prep', rank: 6, nationalRank: 392, taskCompletion: 58, attendance: 71 },
-];
-
-// Current user data (for highlighting and showing in the top stats)
-const currentUserId = 7; // Ethan Miller
+interface Student {
+  _id: string;
+  name: string;
+  points: number;
+  earning: number;
+  school: string;
+  batchRank: number;
+  nationalRank: number;
+  taskCompletion: number;
+  attendance: number;
+}
 
 const StudentLeaderboard = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterVisible, setFilterVisible] = useState(false);
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<Student | null>(null);
   const [leaderboardType, setLeaderboardType] = useState<'national' | 'batch'>('national');
+  const [nationalStudents, setNationalStudents] = useState<Student[]>([]);
+  const [batchStudents, setBatchStudents] = useState<Student[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
-    // Find the current user in the leaderboard
-    const foundUser = nationalStudentLeaderboard.find(student => student.id === currentUserId);
-    setCurrentUser(foundUser);
-  }, []);
+    fetchLeaderboardData();
+  }, [leaderboardType]);
+
+  const fetchLeaderboardData = async () => {
+    try {
+      setLoading(true);
+      const studentId = localStorage.getItem('id');
+      const batchId = localStorage.getItem('batchId');
+
+      // Fetch national leaderboard
+      const nationalResponse = await axios.get(`${API_URL}/api/students/leaderboard/national`);
+      setNationalStudents(nationalResponse.data);
+
+      // Fetch batch leaderboard if batchId exists
+      if (batchId) {
+        const batchResponse = await axios.get(`${API_URL}/api/students/leaderboard/batch/${batchId}`);
+        setBatchStudents(batchResponse.data);
+      }
+
+      // Find current user in the data
+      const currentUserData = nationalResponse.data.find((student: Student) => student._id === studentId);
+      if (currentUserData) {
+        setCurrentUser(currentUserData);
+      }
+
+      // Calculate ranks
+      await axios.get(`${API_URL}/api/students/leaderboard/calculate`);
+    } catch (error) {
+      console.error('Error fetching leaderboard data:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load leaderboard data',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
@@ -54,15 +81,19 @@ const StudentLeaderboard = () => {
     setFilterVisible(!filterVisible);
   };
 
-  const filteredNationalStudents = nationalStudentLeaderboard.filter(student => 
+  const filteredNationalStudents = nationalStudents.filter(student => 
     student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     student.school.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const filteredBatchStudents = batchStudentLeaderboard.filter(student => 
-    student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    student.school.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // const filteredBatchStudents = batchStudents.filter(student => 
+  //   student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  //   student.school.toLowerCase().includes(searchTerm.toLowerCase())
+  // );
+
+  if (loading) {
+    return <div className="flex items-center justify-center min-h-[400px]">Loading leaderboard...</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -98,8 +129,8 @@ const StudentLeaderboard = () => {
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold">
                   {leaderboardType === 'national' 
-                    ? currentUser.rank 
-                    : batchStudentLeaderboard.find(s => s.id === currentUser.id)?.rank || '-'}
+                    ? currentUser.nationalRank 
+                    : batchStudents.find(s => s._id === currentUser._id)?.batchRank || '-'}
                 </div>
                 <div>
                   <h3 className="font-medium">Your Ranking</h3>
@@ -151,10 +182,10 @@ const StudentLeaderboard = () => {
       )}
 
       <Tabs defaultValue="national" onValueChange={(value) => setLeaderboardType(value as 'national' | 'batch')}>
-        <TabsList className="grid w-full max-w-md grid-cols-2 mx-auto">
+        {/* <TabsList className="grid w-full max-w-md grid-cols-2 mx-auto">
           <TabsTrigger value="national">National Leaderboard</TabsTrigger>
           <TabsTrigger value="batch">Batch Leaderboard</TabsTrigger>
-        </TabsList>
+        </TabsList> */}
         
         <TabsContent value="national" className="mt-6">
           <Card>
@@ -177,27 +208,27 @@ const StudentLeaderboard = () => {
                 
                 {filteredNationalStudents.map((student) => (
                   <div 
-                    key={student.id}
-                    className={`grid grid-cols-12 py-3 px-4 items-center border-b last:border-0 hover:bg-muted/20 transition-colors ${student.id === currentUserId ? 'bg-primary/5' : ''}`}
+                    key={student._id}
+                    className={`grid grid-cols-12 py-3 px-4 items-center border-b last:border-0 hover:bg-muted/20 transition-colors ${student._id === currentUser?._id ? 'bg-primary/5' : ''}`}
                   >
                     <div className="col-span-1 text-center font-semibold">
-                      {student.rank <= 3 ? (
+                      {student.nationalRank <= 3 ? (
                         <div className={`
                           w-6 h-6 mx-auto rounded-full flex items-center justify-center text-white
-                          ${student.rank === 1 ? 'bg-yellow-500' : 
-                            student.rank === 2 ? 'bg-gray-400' : 'bg-amber-700'}
+                          ${student.nationalRank === 1 ? 'bg-yellow-500' : 
+                            student.nationalRank === 2 ? 'bg-gray-400' : 'bg-amber-700'}
                         `}>
-                          {student.rank}
+                          {student.nationalRank}
                         </div>
                       ) : (
-                        student.rank
+                        student.nationalRank
                       )}
                     </div>
                     <div className="col-span-3 sm:col-span-3 flex items-center gap-3">
                       <UserAvatar 
                         name={student.name} 
                         size="sm" 
-                        highlight={student.id === currentUserId}
+                        highlight={student._id === currentUser?._id}
                       />
                       <span className="font-medium truncate">{student.name}</span>
                     </div>
@@ -216,7 +247,7 @@ const StudentLeaderboard = () => {
                       </span>
                     </div>
                     <div className="col-span-1 md:col-span-1 text-center font-semibold">{student.points}</div>
-                    <div className="col-span-2 text-center text-success font-semibold">₹{student.earnings}</div>
+                    <div className="col-span-2 text-center text-success font-semibold">₹{student.earning}</div>
                   </div>
                 ))}
                 
@@ -230,7 +261,7 @@ const StudentLeaderboard = () => {
           </Card>
         </TabsContent>
         
-        <TabsContent value="batch" className="mt-6">
+        {/* <TabsContent value="batch" className="mt-6">
           <Card>
             <CardHeader>
               <CardTitle>Batch Student Leaderboard</CardTitle>
@@ -242,7 +273,7 @@ const StudentLeaderboard = () => {
                   <div className="col-span-1 text-center">Rank</div>
                   <div className="col-span-3 sm:col-span-3">Student</div>
                   <div className="col-span-2 hidden sm:block">School</div>
-                  <div className="col-span-1 hidden md:block text-center">Natl. Rank</div>
+                  <div className="col-span-1 hidden md:block text-center">Batch Rank</div>
                   <div className="col-span-1 md:col-span-1 text-center">Tasks</div>
                   <div className="col-span-1 md:col-span-1 text-center">Attend.</div>
                   <div className="col-span-1 md:col-span-1 text-center">Points</div>
@@ -251,32 +282,32 @@ const StudentLeaderboard = () => {
                 
                 {filteredBatchStudents.map((student) => (
                   <div 
-                    key={student.id}
-                    className={`grid grid-cols-12 py-3 px-4 items-center border-b last:border-0 hover:bg-muted/20 transition-colors ${student.id === currentUserId ? 'bg-primary/5' : ''}`}
+                    key={student._id}
+                    className={`grid grid-cols-12 py-3 px-4 items-center border-b last:border-0 hover:bg-muted/20 transition-colors ${student._id === currentUser?._id ? 'bg-primary/5' : ''}`}
                   >
                     <div className="col-span-1 text-center font-semibold">
-                      {student.rank <= 3 ? (
+                      {student.batchRank <= 3 ? (
                         <div className={`
                           w-6 h-6 mx-auto rounded-full flex items-center justify-center text-white
-                          ${student.rank === 1 ? 'bg-yellow-500' : 
-                            student.rank === 2 ? 'bg-gray-400' : 'bg-amber-700'}
+                          ${student.batchRank === 1 ? 'bg-yellow-500' : 
+                            student.batchRank === 2 ? 'bg-gray-400' : 'bg-amber-700'}
                         `}>
-                          {student.rank}
+                          {student.batchRank}
                         </div>
                       ) : (
-                        student.rank
+                        student.batchRank
                       )}
                     </div>
                     <div className="col-span-3 sm:col-span-3 flex items-center gap-3">
                       <UserAvatar 
                         name={student.name} 
                         size="sm" 
-                        highlight={student.id === currentUserId}
+                        highlight={student._id === currentUser?._id}
                       />
                       <span className="font-medium truncate">{student.name}</span>
                     </div>
                     <div className="col-span-2 hidden sm:block truncate">{student.school}</div>
-                    <div className="col-span-1 hidden md:block text-center font-semibold">#{student.nationalRank}</div>
+                    <div className="col-span-1 hidden md:block text-center font-semibold">#{student.batchRank}</div>
                     <div className="col-span-1 md:col-span-1 text-center">
                       <span className={`font-medium ${student.taskCompletion >= 90 ? 'text-success' : 
                         student.taskCompletion >= 70 ? 'text-warning' : 'text-muted-foreground'}`}>
@@ -290,7 +321,7 @@ const StudentLeaderboard = () => {
                       </span>
                     </div>
                     <div className="col-span-1 md:col-span-1 text-center font-semibold">{student.points}</div>
-                    <div className="col-span-2 text-center text-success font-semibold">₹{student.earnings}</div>
+                    <div className="col-span-2 text-center text-success font-semibold">₹{student.earning}</div>
                   </div>
                 ))}
                 
@@ -302,7 +333,7 @@ const StudentLeaderboard = () => {
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
+        </TabsContent> */}
       </Tabs>
     </div>
   );

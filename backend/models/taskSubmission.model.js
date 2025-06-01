@@ -21,6 +21,10 @@ const taskSubmissionSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  googleDocsLink: {
+    type: String,
+    trim: true
+  },
   fileUrl: {
     type: String,
     trim: true

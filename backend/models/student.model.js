@@ -37,6 +37,18 @@ const studentSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  points: {
+    type: Number,
+    default: 0
+  },
+  batchRank: {
+    type: Number,
+    default: 0
+  },
+  nationalRank: {
+    type: Number,
+    default: 0
+  },
   attendance: {
     type: Number,
     default: 0

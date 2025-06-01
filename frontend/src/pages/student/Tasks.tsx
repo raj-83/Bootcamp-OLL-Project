@@ -73,6 +73,7 @@ const Tasks = () => {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [submissionText, setSubmissionText] = useState('');
   const [submissionFile, setSubmissionFile] = useState<File | null>(null);
+  const [googleDocsLink, setGoogleDocsLink] = useState('');
   const [studentStats, setStudentStats] = useState({
     taskCompletion: 0,
     attendance: 0,
@@ -216,10 +217,10 @@ const Tasks = () => {
   };
 
   const handleSubmitTask = async (taskId: string, batchId: string) => {
-    if (!submissionText && !submissionFile) {
+    if (!submissionText && !submissionFile && !googleDocsLink) {
       toast({
         title: "Submission Error",
-        description: "Please add a description or an attachment to your submission.",
+        description: "Please add a description, an attachment, or a Google Docs link to your submission.",
         variant: "destructive"
       });
       return;
@@ -241,6 +242,7 @@ const Tasks = () => {
       formData.append('taskId', taskId);
       formData.append('batchId', batchId);
       formData.append('notes', submissionText);
+      formData.append('googleDocsLink', googleDocsLink);
       
       if (submissionFile) {
         formData.append('file', submissionFile);
@@ -264,6 +266,7 @@ const Tasks = () => {
               submission: {
                 _id: response.data.submission._id,
                 notes: submissionText,
+                googleDocsLink: googleDocsLink,
                 status: 'submitted',
                 submissionDate: new Date().toISOString(),
                 fileUrl: response.data.submission.fileUrl,
@@ -287,6 +290,7 @@ const Tasks = () => {
         setTasks(updatedTasks as Task[]);
         setSubmissionText('');
         setSubmissionFile(null);
+        setGoogleDocsLink('');
         
         toast({
           title: "Task Submitted",
@@ -507,6 +511,20 @@ const Tasks = () => {
                                 </div>
                                 
                                 <div className="space-y-2">
+                                  <Label htmlFor="googleDocsLink">Google Docs Link (Optional)</Label>
+                                  <Input 
+                                    id="googleDocsLink" 
+                                    type="url"
+                                    placeholder="https://docs.google.com/document/d/..."
+                                    value={googleDocsLink}
+                                    onChange={(e) => setGoogleDocsLink(e.target.value)}
+                                  />
+                                  <p className="text-xs text-muted-foreground">
+                                    If you're having trouble uploading files, you can share your work via Google Docs
+                                  </p>
+                                </div>
+                                
+                                <div className="space-y-2">
                                   <Label htmlFor="attachment">Upload Attachment</Label>
                                   <Input 
                                     id="attachment" 
@@ -578,6 +596,20 @@ const Tasks = () => {
                                 onChange={(e) => setSubmissionText(e.target.value)}
                                 rows={5}
                               />
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <Label htmlFor={`googleDocsLink-${task._id}`}>Google Docs Link (Optional)</Label>
+                              <Input 
+                                id={`googleDocsLink-${task._id}`} 
+                                type="url"
+                                placeholder="https://docs.google.com/document/d/..."
+                                value={googleDocsLink}
+                                onChange={(e) => setGoogleDocsLink(e.target.value)}
+                              />
+                              <p className="text-xs text-muted-foreground">
+                                If you're having trouble uploading files, you can share your work via Google Docs
+                              </p>
                             </div>
                             
                             <div className="space-y-2">
@@ -712,6 +744,20 @@ const Tasks = () => {
                                   onChange={(e) => setSubmissionText(e.target.value)}
                                   rows={5}
                                 />
+                              </div>
+                              
+                              <div className="space-y-2">
+                                <Label htmlFor={`googleDocsLink-${task._id}`}>Google Docs Link (Optional)</Label>
+                                <Input 
+                                  id={`googleDocsLink-${task._id}`} 
+                                  type="url"
+                                  placeholder="https://docs.google.com/document/d/..."
+                                  value={googleDocsLink}
+                                  onChange={(e) => setGoogleDocsLink(e.target.value)}
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                  If you're having trouble uploading files, you can share your work via Google Docs
+                                </p>
                               </div>
                               
                               <div className="space-y-2">

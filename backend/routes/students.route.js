@@ -212,4 +212,74 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
+// Calculate and update leaderboard ranks
+router.get('/leaderboard/calculate', async (req, res) => {
+  try {
+    // Get all students and sort by points for national rank
+    const allStudents = await Student.find().sort({ points: -1 });
+    
+    // Update national ranks
+    for (let i = 0; i < allStudents.length; i++) {
+      await Student.findByIdAndUpdate(allStudents[i]._id, {
+        nationalRank: i + 1
+      });
+    }
+
+    // Get all batches
+    const batches = await Batch.find().populate('students');
+    
+    // Calculate batch ranks for each batch
+    for (const batch of batches) {
+      const batchStudents = await Student.find({
+        _id: { $in: batch.students }
+      }).sort({ points: -1 });
+      
+      // Update batch ranks
+      for (let i = 0; i < batchStudents.length; i++) {
+        await Student.findByIdAndUpdate(batchStudents[i]._id, {
+          batchRank: i + 1
+        });
+      }
+    }
+
+    res.status(200).json({ message: 'Leaderboard ranks updated successfully' });
+  } catch (error) {
+    console.error('Error calculating leaderboard:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Get national leaderboard
+router.get('/leaderboard/national', async (req, res) => {
+  try {
+    const students = await Student.find()
+      .sort({ points: -1 })
+      .select('name points nationalRank school taskCompletion attendance earning batches')
+      .limit(100); // Limit to top 100 students
+    
+    res.status(200).json(students);
+  } catch (error) {
+    console.error('Error fetching national leaderboard:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Get batch leaderboard
+router.get('/leaderboard/batch/:batchId', async (req, res) => {
+  try {
+    const { batchId } = req.params;
+    
+    const students = await Student.find({
+      batches: batchId
+    })
+      .sort({ points: -1 })
+      .select('name points batchRank school taskCompletion attendance earning batches');
+    
+    res.status(200).json(students);
+  } catch (error) {
+    console.error('Error fetching batch leaderboard:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
 export default router;
