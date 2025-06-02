@@ -87,6 +87,8 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
+import { useNavigate } from "react-router-dom";
+
 const apiUrl = import.meta.env.VITE_REACT_API_URL || "https://localhost:5000";
 
 // Add the form schema
@@ -149,6 +151,8 @@ const BatchDetails = () => {
     rating: 0,
     points: 0,
   });
+
+  const navigate = useNavigate();
 
   // Initialize form with Zod resolver
   const form = useForm({
@@ -954,7 +958,7 @@ const BatchDetails = () => {
           >
             <TabsList className="mb-4">
               <TabsTrigger value="tasks">Tasks</TabsTrigger>
-              <TabsTrigger value="submissions">Submissions</TabsTrigger>
+              {/* <TabsTrigger value="submissions">Submissions</TabsTrigger> */}
             </TabsList>
 
             <TabsContent value="tasks">
@@ -992,7 +996,7 @@ const BatchDetails = () => {
                           <p className="text-sm mt-3">{task.description}</p>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Badge
+                          {/* <Badge
                             variant={getStatusBadgeVariant(task.status).variant}
                             className={
                               getStatusBadgeVariant(task.status).className
@@ -1005,7 +1009,7 @@ const BatchDetails = () => {
                               : task.status === "overdue"
                               ? "Overdue"
                               : "Not Started"}
-                          </Badge>
+                          </Badge> */}
                           <Button
                             onClick={() => openEditDialog(task)}
                             variant="outline"
@@ -1024,9 +1028,7 @@ const BatchDetails = () => {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => {
-                              setActiveSubmissionTab("submissions");
-                            }}
+                            onClick={() => navigate('/mentor/task-review')}
                           >
                             View Submissions
                           </Button>
@@ -1038,7 +1040,7 @@ const BatchDetails = () => {
               </div>
             </TabsContent>
 
-            <TabsContent value="submissions">
+            {/* <TabsContent value="submissions">
               {selectedSubmissionId ? (
                 <div className="space-y-4">
                   <div className="flex justify-between">
@@ -1136,7 +1138,7 @@ const BatchDetails = () => {
                   </CardContent>
                 </Card>
               )}
-            </TabsContent>
+            </TabsContent> */}
           </Tabs>
 
           <Dialog
