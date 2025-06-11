@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Rocket, Users, Trophy, Star } from 'lucide-react';
@@ -50,7 +49,7 @@ const Index = () => {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-in" style={{animationDelay: '0.3s'}}>
             <Button size="lg" asChild>
-              <Link to="/register">
+              <Link to="/login?tab=register">
                 Get Started <ArrowRight className="ml-2" size={16} />
               </Link>
             </Button>
@@ -120,7 +119,7 @@ const Index = () => {
           <h2 className="text-3xl font-bold mb-4">Ready to Start Your Business Journey?</h2>
           <p className="text-muted-foreground mb-8">Join hundreds of students who are building their entrepreneurial skills.</p>
           <Button size="lg" asChild>
-            <Link to="/register">
+            <Link to="/login?tab=register">
               Register Now <ArrowRight className="ml-2" size={16} />
             </Link>
           </Button>
