@@ -14,12 +14,13 @@ export const createStudent = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Step 3: Create a new student document (not saved yet)
+    // Step 3: Save the student first to get the _id
     const newStudent = new Student({
       ...rest,
       password: hashedPassword,
       batches,
     });
+    await newStudent.save();
 
     // Step 4: For each batch, add student to batch and collect teacher
     for (const batchId of batches) {
@@ -39,10 +40,8 @@ export const createStudent = async (req, res) => {
       }
     }
 
-    // Step 5: Assign collected teacher IDs to student's teachers field
+    // Step 5: Assign collected teacher IDs to student's teachers field and update
     newStudent.teachers = Array.from(teacherSet);
-
-    // Step 6: Save the student
     await newStudent.save();
 
     // Step 7: Add student to each teacher's student list
