@@ -222,7 +222,7 @@ const AdminStudents = () => {
       const batchId = batchNameToIdMap[data.batches];
       const studentData = {
         ...data,
-        batches: data.batch ? [ batchNameToIdMap[data.batch] ] : []
+        batches: data.batches ? [ batchNameToIdMap[data.batches] ] : []
       };
       
       const response = await axios.post(`${apiUrl}/api/students`, studentData);

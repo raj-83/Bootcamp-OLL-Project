@@ -787,7 +787,7 @@ const AdminBatches = () => {
                 )}
               />
 
-              <div>
+              {/* <div>
                 <FormLabel>Bulk Add Students</FormLabel>
                 <div className="mt-2 border-2 border-dashed rounded-lg p-4 text-center">
                   <label className="cursor-pointer">
@@ -803,7 +803,7 @@ const AdminBatches = () => {
                     </div>
                   </label>
                 </div>
-              </div>
+              </div> */}
 
               <DialogFooter>
                 <Button

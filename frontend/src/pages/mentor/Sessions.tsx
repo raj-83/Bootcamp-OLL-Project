@@ -80,7 +80,7 @@ const sessionFormSchema = z.object({
     }, { message: "Session date cannot be in the past" }),
   time: z.string()
     .min(1, { message: "Time is required" })
-    .regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9] (AM|PM) - ([0-1]?[0-9]|2[0-3]):[0-5][0-9] (AM|PM)$/, 
+    .regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]\s*(AM|PM|am|pm)\s*-\s*([0-1]?[0-9]|2[0-3]):[0-5][0-9]\s*(AM|PM|am|pm)$/, 
       { message: "Time must be in format: HH:MM AM/PM - HH:MM AM/PM" }),
   notes: z.string()
     .min(10, { message: "Notes must be at least 10 characters long" })
