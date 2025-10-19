@@ -58,13 +58,23 @@ It supports **role-based access**, **task tracking**, **gamified learning**, and
 ## 📸 UI Snapshots
 
 ### 👩‍🏫 Manage Teachers
-![Manage Teachers](./assets/manage-teachers.png)
+<a href="./assets/manage-teachers.png" target="_blank" rel="noopener noreferrer">
+  <img src="./assets/manage-teachers.png" alt="Manage Teachers Dashboard" width="700" loading="lazy">
+</a>
+
+---
 
 ### 🧑‍🎓 Manage Students
-![Manage Students](./assets/manage-students.png)
+<a href="./assets/manage-students.png" target="_blank" rel="noopener noreferrer">
+  <img src="./assets/manage-students.png" alt="Manage Students Dashboard" width="700" loading="lazy">
+</a>
+
+---
 
 ### 🗓️ Manage Batches
-![Manage Batches](./assets/manage-batches.png)
+<a href="./assets/manage-batches.png" target="_blank" rel="noopener noreferrer">
+  <img src="./assets/manage-batches.png" alt="Manage Batches Dashboard" width="700" loading="lazy">
+</a>
 
 ---
 
