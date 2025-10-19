@@ -58,23 +58,21 @@ It supports **role-based access**, **task tracking**, **gamified learning**, and
 ## 📸 UI Snapshots
 
 ### 👩‍🏫 Manage Teachers
-<a href="./assets/manage-teachers.png" target="_blank" rel="noopener noreferrer">
-  <img src="./assets/manage-teachers.png" alt="Manage Teachers Dashboard" width="700" loading="lazy">
-</a>
+<img width="1904" height="857" alt="image" src="https://github.com/user-attachments/assets/b868e392-c98f-4c30-85c8-1f2d454e368e" />
+
 
 ---
 
 ### 🧑‍🎓 Manage Students
-<a href="./assets/manage-students.png" target="_blank" rel="noopener noreferrer">
-  <img src="./assets/manage-students.png" alt="Manage Students Dashboard" width="700" loading="lazy">
-</a>
+<img width="1897" height="847" alt="image" src="https://github.com/user-attachments/assets/effccfe9-9b69-4c46-bc76-c0d510c2d91c" />
+
 
 ---
 
 ### 🗓️ Manage Batches
-<a href="./assets/manage-batches.png" target="_blank" rel="noopener noreferrer">
-  <img src="./assets/manage-batches.png" alt="Manage Batches Dashboard" width="700" loading="lazy">
-</a>
+<img width="1901" height="866" alt="image" src="https://github.com/user-attachments/assets/41bec28f-0c82-4d2d-9f66-7426182cad7e" />
+
+<img width="1897" height="872" alt="image" src="https://github.com/user-attachments/assets/6d8d4989-54c9-4832-81ce-4ea87ba0e878" />
 
 ---
 
@@ -84,3 +82,4 @@ It supports **role-based access**, **task tracking**, **gamified learning**, and
 ```bash
 git clone https://github.com/yourusername/oll-bootcamp-portal.git
 cd oll-bootcamp-portal
+
